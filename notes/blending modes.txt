@@ -1,0 +1,62 @@
+
+output = min(1, src * sfactor + dest * dfactor )
+
+GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA are available only if the GL version is 1.4 or greater or if the ARB_imaging is supported by your implementation.
+GL_SRC_COLOR and GL_ONE_MINUS_SRC_COLOR are valid only for sfactor if the GL version is 1.4 or greater.
+GL_DST_COLOR and GL_ONE_MINUS_DST_COLOR are valid only for dfactor if the GL version is 1.4 or greater.
+GL_REPLACE may only be used if the GL version is 1.1 or greater.
+GL_COMBINE mode and its associated constants may only be used if the GL version is 1.3 or greater.
+GL_TEXTUREn may only be used if the GL version is 1.4 or greater.
+Use glAlphaFunc to partition lower/upper halves of formulas.
+Use glColor to modulate source alpha.
+ARB_imaging: glBlendEquation glBlendColor.
+glBlendFuncSeparate is available only if the GL version is 1.4 or greater.
+For OpenGL versions 1.3 and greater, or when the ARB_multitexture extension is supported,
+glTexEnv controls the texture environment for the current active texture unit, selected
+by glActiveTexture.
+glTexSubImage2D, glCopyTexImage2D is available only if the GL version is 1.1 or greater.
+
+
+[NB. saturation in C is ( 255 - x < y ) ? 255 : ( x + y )]
+
+"Right 98% of the time, and don't care about the other 3%."
+
+
+Render to Texture:
+
+glReadPixels -> glTexSubImage2D
+glCopyTexSubImage
+
+ARB_framebuffer_object
+glBindFramebufferARB 
+
+
+EXT_framebuffer_object
+
+
+
+
+NORMAL
+
+glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+
+
+SCREEN
+
+A + B * (1 - A)
+
+glBlendFunc(ONE, ONE_MINUS_SRC_COLOR)
+
+
+
+OVERLAY
+
+lumCoeff = (0.2125, 0.7154, 0.0721, 1.0)
+
+float luminance = dot(base, lumCoeff);
+if (luminance < 0.5)
+    result = 2.0 * blend * base;
+else
+    result = 1 - 2.0 * (1 - blend) * (1 - base);
+

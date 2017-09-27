@@ -1,0 +1,248 @@
+
+Network Reflector
+
+This is a TCP listener that listens on a control socket for command
+and control, and binds to a public port to listen for incoming
+client connections.
+
+Each client connection is first validated using a session token
+that must be supplied via the control channel; control will issue
+a join command and supply a token, then one incoming connection
+can use that token to authenticate.
+
+Incoming connections are given a small initial context with a
+buffer to hold the session token. Once the token has been received,
+find a match in the pending sessions set and attach that to this
+connection.
+
+
+ConnectionState {
+	socket,
+	read head, read tail, read remain, read completion handler,
+	write head, write tail, write remain, write completion handler,
+	layer ref,
+}
+
+
+(a) copy received data to each write buffer, N-1 copies but no
+fragmentation issues with partially filled buffers.
+(b) ref count the buffer pages and give them internal sizes,
+then link whole pages into queue pages for each connection.
+
+Treat the local receiver as a write connection, giving it queue pages
+as well. Call the writer func to attempt sends - usually this will
+attempt TCP writes but can instead write to file, marshal cross
+thread, or directly execute commands.
+
+Given a unique artist id and sequence numbers on strokes, any missing
+strokes after losing a connection or server crash can be replayed by
+the client. The server will not attempt to keep a history but must
+save the artist id, layer context, and last stroke number when it
+checkpoints the document.
+
+
+
+Interaction Model
+
+active tool, space-to-pan, pen up-down, selection,
+zoom and scroll pos, scroll inertia, current colour,
+current brush.
+inputs: tablet input, keys, scroll events, wheel.
+
+
+Layout
+
+stackable frames, colour, image with transform, repeat flags.
+position: top-left and bottom-right points,
+anchor flags: top/middle/bottom, left/center/right.
+anchor siblings: tl sib, br sib (parent if not given)
+clip flag: clip overflowing content.
+
+
+Animation
+
+varies layer and/or child properties over time.
+bound to children by index (can bind from names at load)
+spawn animation with target layer, or attach to the layer?
+need: reverse play, play from tag.
+examples: slide in/out, fade in/out, glow, sparkle.
+interactive: hover, slider, min-max slider, radio buttons,
+tabset, tree.
+events: enter, leave, down, up (button state management though..)
+there is more to this: input focus, shortcut key, text entry?
+
+perhaps any frame can have a native controller which manages
+the state machine and delivers events (button, radio, text input)
+and the layout engine builds a view on top.
+
+basis: parts of the ui have states, and animations transition
+between states (or back to the same state)
+each state has a set of reactions that match named events;
+the animation can include event sends at any point.
+jQuery allows animations to be queued (e.g. box puzzle)
+
+
+StretchDIBits
+
+TODO: if StretchDIBits is 1:1 and source is a top-down DIB
+and XSrc and YSrc are both 0, and the height to render is
+less than the DIB height, the top portion of the source
+image is rendered instead of the bottom portion.
+however, a bottom-up DIB is rendered consistently.
+
+	// "SrcX and SrcY are in the DIB's space and are therefore upside
+	// down in relation to the DC (Y = 0 is at the bottom of the image)."
+	// http://support.microsoft.com/kb/81498 'DIBs and Their Uses'
+	int src_h = (int)doc.bottom - (int)doc.top;
+	int src_y = r->surf->height - (int)doc.top - src_h;
+
+	int src_x = (int)doc.left;
+
+	r->bmi.bmiHeader.biWidth = (long)r->surf->width;
+	//r->bmi.bmiHeader.biHeight = - (long)r->surf->height; // top-down DIB.
+	r->bmi.bmiHeader.biHeight = (long)r->surf->height;
+
+	//old = SetStretchBltMode(dc, halftone ? HALFTONE : COLORONCOLOR);
+	old = SetStretchBltMode(dc, COLORONCOLOR);
+
+	StretchDIBits(dc, (int)view.left, (int)view.top,
+		(int)view.right - (int)view.left, (int)view.bottom - (int)view.top,
+		src_x, src_y, (int)doc.right - (int)doc.left, src_h,
+		r->surf->data, &r->bmi, DIB_RGB_COLORS, SRCCOPY);
+
+	SetStretchBltMode(dc, old);
+
+
+
+	// shrink the view rect to stay within document bounds.
+	if (doc.left < 0) { view.left -= doc.left; doc.left = 0; }
+	if (doc.top < 0) { view.top -= doc.top; doc.top = 0; }
+	if (doc.right > w) { view.right -= (doc.right - w); doc.right = w; }
+	if (doc.bottom > h) { view.bottom -= (doc.bottom - h); doc.bottom = h; }
+
+#include "defs.h"
+#include "ui.h"
+#include "ui_win_impl.h"
+#include "surface.h"
+
+struct UI_RenderToView {
+	UI_Window* view;
+	struct SurfaceData* surf;
+	BITMAPINFO bmi;
+	byte* bits;
+};
+
+static const int c_scanBufSize = 64 * 1024; // 64K scanline buffer.
+
+UI_RenderToView* ui_create_render_to_view(UI_Window* w, SurfaceData* surf)
+{
+	UI_RenderToView* r = cpart_new(UI_RenderToView);
+	BITMAPINFOHEADER h = { sizeof(BITMAPINFOHEADER), 0, 0, 1, 24, BI_RGB, 0, 0, 0, 0, 0 };
+	r->bmi.bmiHeader = h;
+	r->surf = surf; r->view = w;
+	r->bits = malloc(c_scanBufSize);
+	return r;
+}
+
+void ui_render_to_view(UI_RenderToView* r, UI_PaintEvent* e,
+	irect doc, irect view, bool halftone)
+{
+	HDC dc = ((UI_PaintRequest*)e)->dc;
+	int old, remain, lines, top, line_stride, span, i;
+	byte *wr, *src, *rd;
+
+	span = 3 * (view.right - view.left);
+	line_stride = ((span + 3) >> 2) << 2;
+	if (line_stride <= 0)
+		return; // view rect is zero width or invalid.
+	if (line_stride > c_scanBufSize)
+		return; // this is bad; at least avoid infinite loop.
+
+	old = SetStretchBltMode(dc, COLORONCOLOR);
+
+	assert(doc.top >= 0 && doc.left >= 0);
+	assert(view.bottom - view.top == doc.bottom - doc.top);
+	assert(doc.left + (view.right - view.left) <= r->surf->width);
+	assert(doc.top + (view.bottom - view.top) <= r->surf->height);
+
+	src = r->surf->data + (doc.top * r->surf->stride) + (doc.left * 4);
+
+	// render batches of lines until done.
+	top = view.top;
+	while (top < view.bottom)
+	{
+		wr = r->bits + c_scanBufSize; // start at end of buffer.
+		remain = c_scanBufSize;
+
+		// render lines into buffer.
+		lines = 0;
+		while (remain >= line_stride && top + lines < view.bottom)
+		{
+			wr -= line_stride; // write lines in reverse order.
+
+			// render one line.
+			rd = src;
+			for (i = 0; i < span; i += 3)
+			{
+				// map RGBA -> BGR.
+				wr[i] = rd[2];
+				wr[i+1] = rd[1];
+				wr[i+2] = rd[0];
+				rd += 4;
+			}
+
+			src += r->surf->stride;
+
+			lines++;
+			remain -= line_stride;
+
+			//if (lines==2) break; // TEST: two line at a time.
+		}
+
+		// copy buffered lines to screen.
+		if (lines > 0)
+		{
+			r->bmi.bmiHeader.biWidth = view.right - view.left;
+			r->bmi.bmiHeader.biHeight = lines;
+			StretchDIBits(dc,
+				view.left, top, view.right - view.left, lines,
+				0, 0, view.right - view.left, lines,
+				wr, &r->bmi, DIB_RGB_COLORS, SRCCOPY);
+			top += lines;
+		}
+		else break; // cannot happen.
+	}
+
+	SetStretchBltMode(dc, old);
+
+	// fill requested area outside the view rect.
+	{COLORREF grey = RGB(127,127,127);
+	if (view.left > 0)
+		ui_fillRect(dc, 0, 0, (int)view.left, (int)e->rect.bottom, grey);
+	if (view.right < e->rect.right)
+		ui_fillRect(dc, (int)view.right, 0, (int)e->rect.right, (int)e->rect.bottom, grey);
+	if (view.top > 0)
+		ui_fillRect(dc, (int)view.left, 0, (int)view.right, (int)view.top, grey);
+	if (view.bottom < e->rect.bottom)
+		ui_fillRect(dc, (int)view.left, (int)view.bottom, (int)view.right, (int)e->rect.bottom, grey);
+	}
+}
+
+
+8BIM segment format:
+
+'8BIM' - 4 bytes
+type - 2 bytes
+name - pascal string padded to 2 byte alignment
+size - 4 bytes size of the following data
+data - 'size' bytes
+
+0x1C 0x02 (IPTC header)
+0x1C 0x02 - marker
+type - 1 byte
+size - 2 bytes, of the following data
+data - 'size' bytes
+
+The core format PSD 3.0 format is built on a short header specifying the image size and colour channels and then three information sections called the Colour Mode Data Block, Image Resources Block and Layer and Mask Information Block defining features such as duotone settings, channels and paths and layer opacity and blend mode respectively. After that comes the image data.
+The PSD format is divided into five sections. The first is the header which specifies the image size and color channels; the second contains the color mode data; the third contains the image resources; the fourth has the layer and mask information; and the final section contains the image data.
+

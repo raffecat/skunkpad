@@ -1,0 +1,45 @@
+screen blend mode
+
+screen is algebraically identical to 1-((1-a)*(1-b))
+
+
+quick algebra shows:
+1-(1-a)(1-b)
+1-(1-a-b+ab)
+1-1+a+b-ab
+a+b-ab
+a+b(1-a) //a*ONE+b*ONE_MINUS_SRC_COLOR
+
+
+
+1-(1-a)(1-b)
+
+is commutative. Swap a and b and the result is the same.
+
+
+EDIT: if you meant associative, which is
+
+(a screen b) screen c === a screen (b screen c)
+
+then we want to show
+
+(a+b(1-a)) + c*(1-(a+b(1-a)) === a+(b+c*(1-b))(1-a)
+
+expanding both sides
+
+a+b-ab+ c*(1-(a+b-ab)) === a+(b+c-bc)(1-a)
+
+a+b-ab+c*(1-a-b+ab) === a+b-ab+c-ca-bc+abc
+
+a+b-ab+c-ca-bc+abc == a+b-ab+c-ca-bc+abc
+
+which shows its associative too
+
+
+HENCE it doesnt matter WHAT order you draw lights in, or even if you group lights together and draw layers at a time
+
+
+Do NOT bash the screen blending mode. It's one of the MOST important ones you should know. It brightens without ever oversaturating
+
+November 03, 2010, 05:03:13 PM by Glaiel-Gamer
+

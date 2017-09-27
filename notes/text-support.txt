@@ -1,0 +1,128 @@
+In practice ECMAScript specifies (and implementations provide) such
+minimal Unicode support (no canonicalization or character class
+primitives [combining, etc.], for instance, and no way to work with
+characters rather than UCS-2 codes/surrogate halves, and no access to
+codecs other than UTF-8<->UTF-16 [often buggy and incomplete, and
+rarely able to deal with errors in any way other than throwing
+exceptions], nor any access to the Unicode names database or the
+Unihan database) that applications are basically on their own.
+
+
+MultiByteToWideChar:
+
+Starting with Windows Vista, this function fully conforms with the
+Unicode 4.1 specification for UTF-8 and UTF-16. The function used on
+earlier operating systems encodes or decodes lone surrogate halves or
+mismatched surrogate pairs. 
+
+Windows XP: To prevent the security problem of the non-shortest-form
+versions of UTF-8 characters, MultiByteToWideChar deletes these characters.
+
+MB_COMPOSITE
+Always use decomposed characters, that is, characters in which a base
+character and one or more nonspacing characters each have distinct
+code point values. 
+
+MB_PRECOMPOSED
+Always use precomposed characters, that is, characters having a single
+character value for a base or nonspacing character combination.
+
+Consider calling NormalizeString after converting with MultiByteToWideChar.
+NormalizeString provides more accurate, standard, and consistent data, and
+can also be faster.
+
+Note that for the NORM_FORM enumeration being passed to NormalizeString,
+NormalizationC corresponds to MB_PRECOMPOSED and
+NormalizationD corresponds to MB_COMPOSITE.
+
+Unicode version 4.1 includes over 97,000 characters, with over 70,000
+characters for Chinese alone.
+
+
+A supplementary character is a character located beyond the BMP, and a 
+"surrogate" is a UTF-16 code value. For UTF-16, a "surrogate pair" is 
+required to represent a single supplementary character.
+The first (high) surrogate is a 16-bit code value in the range U+D800 to U+DBFF.
+The second (low) surrogate is a 16-bit code value in the range U+DC00 to U+DFFF.
+These always form a pair - either alone is invalid.
+
+
+* Windows supports surrogate-enabled input method editors (IMEs).
+* The GDI API supports format 12 cmap tables in fonts so that surrogates can be displayed.
+* The Uniscribe API supports supplementary characters.
+* Windows controls, including Edit and Rich Edit, support supplementary characters.
+* The HTML engine supports HTML pages that include supplementary characters for display.
+* The operating system sorting table supports supplementary characters.
+
+Applications automatically support supplementary characters if they use system 
+controls and standard API functions, such as ExtTextOut and DrawText. 
+
+Applications that implement their own editing support by working out glyph 
+positions in a customized way can use Uniscribe for all text processing. 
+Uniscribe has separate functions to deal with complex script processing, 
+such as text display, hit testing, and cursor movement. (but is slow)
+
+
+When breaking lines or otherwise separating text, your Unicode application must 
+keep nonspacing characters with their base characters. Many scripts contain 
+characters that visually combine with other characters on output, for example, 
+diacritical marks ("floating accents").
+
+The Unicode standard does not prescribe meanings for the control codes 0x000D 
+(carriage return) and 0x000A (linefeed). 
+The application must always determine what these codes represent.
+
+
+Byte order mark:
+
+EF BB BF    UTF-8 (de facto)
+FF FE       UTF-16, little endian
+FE FF       UTF-16, big endian
+
+Note: Microsoft uses UTF-16, little endian byte order.
+
+
+The first 32 16-bit code values in Unicode are intended for the 32 control 
+characters. Unicode applications can treat these control characters in exactly 
+the same way as they treat their ASCII equivalents.
+
+
+Your applications should use the line separator character (0x2028) and the 
+paragraph separator character (0x2029) to divide plain text.
+... is this widely done in practice?
+
+
+GetKeyNameText (from scan code)
+
+
+Input Method Editor
+
+The IMM is only enabled on East Asian (Chinese, Japanese, Korean) localized 
+Windows operating systems. On these systems, the application calls 
+GetSystemMetrics with SM_DBCSENABLED to determine if the IMM is enabled.
+
+Windows 2000: Full-featured IMM support is provided in all localized language 
+versions. However, the IMM is enabled only when an Asian language pack is 
+installed. An IME-aware application can call GetSystemMetrics with 
+SM_IMMENABLED to determine if the IMM is enabled.
+
+
+ICU:
+
+A generic solution for multi-byte to UTF-16 and back is the ICU 
+(http://icu.sourceforge.net) which also supports complex text layout 
+and localization. Since it lets you add localization tables it can handle 
+almost any conversion scenario imaginable. (unconstrained license)
+
+If you want to convert between UTF-8 and UTF-16 use the unicode consortium's 
+implementation. If you want to convert between multi-byte and unicode, make 
+sure that you have the correct locales or use the International Componets for 
+Unicode.
+
+http://userguide.icu-project.org/i18n
+
+
+Globalization Step-by-Step
+
+http://msdn.microsoft.com/en-au/goglobal/bb688110.aspx
+
