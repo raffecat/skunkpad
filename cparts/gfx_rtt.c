@@ -1,7 +1,7 @@
-#include "defs.h"
-#include "graphics.h"
-#include "gl_impl.h"
-#include "surface.h"
+import * from defs
+import * from graphics
+import * from gl_impl
+import * from surface
 
 // FBO notes:
 
@@ -33,39 +33,39 @@
 
 // Frame Buffer Object extentions.
 
-bool ogl_framebuffer_object = false;
-bool ogl_framebuffer_blit = false;
-bool ogl_framebuffer_multisample = false;
-bool ogl_packed_depth_stencil = false;
+export bool ogl_framebuffer_object = false;
+export bool ogl_framebuffer_blit = false;
+export bool ogl_framebuffer_multisample = false;
+export bool ogl_packed_depth_stencil = false;
 
 // NB. glRenderbufferStorage may return errors for alpha,
 // luminance, intensity, luminance_alpha formats when not supported.
 
 // mixed dimensions, mixed colour formats, must gen names,
 // glFramebufferTextureLayer, FBOs not shareable across contexts.
-bool ogl_framebuffer_is_arb = false;
+export bool ogl_framebuffer_is_arb = false;
 
 // GL_ARB_framebuffer_object
 // (EXT_framebuffer_object, EXT_framebuffer_blit,
 //  EXT_framebuffer_multisample, EXT_packed_depth_stencil)
-PFNGLBINDRENDERBUFFERPROC oglBindRenderbuffer = 0;
-PFNGLDELETERENDERBUFFERSPROC oglDeleteRenderbuffers = 0;
-PFNGLGENRENDERBUFFERSPROC oglGenRenderbuffers = 0;
-PFNGLRENDERBUFFERSTORAGEPROC oglRenderbufferStorage = 0;
-PFNGLGETRENDERBUFFERPARAMETERIVPROC oglGetRenderbufferParameteriv = 0;
-PFNGLBINDFRAMEBUFFERPROC oglBindFramebuffer = 0;
-PFNGLDELETEFRAMEBUFFERSPROC oglDeleteFramebuffers = 0;
-PFNGLGENFRAMEBUFFERSPROC oglGenFramebuffers = 0;
-PFNGLCHECKFRAMEBUFFERSTATUSPROC oglCheckFramebufferStatus = 0;
-PFNGLFRAMEBUFFERTEXTURE2DPROC oglFramebufferTexture2D = 0;
-PFNGLFRAMEBUFFERRENDERBUFFERPROC oglFramebufferRenderbuffer = 0;
-PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC oglGetFramebufferAttachmentParameteriv = 0;
-PFNGLGENERATEMIPMAPPROC oglGenerateMipmap = 0;
-PFNGLBLITFRAMEBUFFERPROC oglBlitFramebuffer = 0;
-PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC oglRenderbufferStorageMultisample = 0;
-PFNGLFRAMEBUFFERTEXTURELAYERPROC oglFramebufferTextureLayer = 0;
+export PFNGLBINDRENDERBUFFERPROC oglBindRenderbuffer = 0;
+export PFNGLDELETERENDERBUFFERSPROC oglDeleteRenderbuffers = 0;
+export PFNGLGENRENDERBUFFERSPROC oglGenRenderbuffers = 0;
+export PFNGLRENDERBUFFERSTORAGEPROC oglRenderbufferStorage = 0;
+export PFNGLGETRENDERBUFFERPARAMETERIVPROC oglGetRenderbufferParameteriv = 0;
+export PFNGLBINDFRAMEBUFFERPROC oglBindFramebuffer = 0;
+export PFNGLDELETEFRAMEBUFFERSPROC oglDeleteFramebuffers = 0;
+export PFNGLGENFRAMEBUFFERSPROC oglGenFramebuffers = 0;
+export PFNGLCHECKFRAMEBUFFERSTATUSPROC oglCheckFramebufferStatus = 0;
+export PFNGLFRAMEBUFFERTEXTURE2DPROC oglFramebufferTexture2D = 0;
+export PFNGLFRAMEBUFFERRENDERBUFFERPROC oglFramebufferRenderbuffer = 0;
+export PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC oglGetFramebufferAttachmentParameteriv = 0;
+export PFNGLGENERATEMIPMAPPROC oglGenerateMipmap = 0;
+export PFNGLBLITFRAMEBUFFERPROC oglBlitFramebuffer = 0;
+export PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC oglRenderbufferStorageMultisample = 0;
+export PFNGLFRAMEBUFFERTEXTURELAYERPROC oglFramebufferTextureLayer = 0;
 
-void ogl_init_framebuffer_object()
+export void ogl_init_framebuffer_object()
 {
 	ogl_framebuffer_object = (ogl_has_extension("GL_ARB_framebuffer_object") &&
 		(oglBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC) ogl_get_proc("glBindRenderbufferARB")) &&
@@ -123,29 +123,29 @@ void ogl_init_framebuffer_object()
 
 // Pbuffer render to texture extensions.
 
-static bool ogl_render_texture = false;
+bool ogl_render_texture = false;
 
 // WGL_ARB_pixel_format, WGL_EXT_pixel_format
-static PFNWGLGETPIXELFORMATATTRIBIVARBPROC wglGetPixelFormatAttribiv = 0;
-static PFNWGLGETPIXELFORMATATTRIBFVARBPROC wglGetPixelFormatAttribfv = 0;
-static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormat = 0;
+PFNWGLGETPIXELFORMATATTRIBIVARBPROC wglGetPixelFormatAttribiv = 0;
+PFNWGLGETPIXELFORMATATTRIBFVARBPROC wglGetPixelFormatAttribfv = 0;
+PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormat = 0;
 
 // WGL_ARB_pbuffer, WGL_EXT_pbuffer (binary compatible)
 // NB. EXT_pbuffer may not appear in wglGetExtensionsStringARB
 // even thogh EXT_pbuffer is supported?
-static PFNWGLCREATEPBUFFERARBPROC wglCreatePbuffer = 0;
-static PFNWGLGETPBUFFERDCARBPROC wglGetPbufferDC = 0;
-static PFNWGLRELEASEPBUFFERDCARBPROC wglReleasePbufferDC = 0;
-static PFNWGLDESTROYPBUFFERARBPROC wglDestroyPbuffer = 0;
-static PFNWGLQUERYPBUFFERARBPROC wglQueryPbuffer = 0;
+PFNWGLCREATEPBUFFERARBPROC wglCreatePbuffer = 0;
+PFNWGLGETPBUFFERDCARBPROC wglGetPbufferDC = 0;
+PFNWGLRELEASEPBUFFERDCARBPROC wglReleasePbufferDC = 0;
+PFNWGLDESTROYPBUFFERARBPROC wglDestroyPbuffer = 0;
+PFNWGLQUERYPBUFFERARBPROC wglQueryPbuffer = 0;
 
 // WGL_ARB_create_context
-static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = 0;
+PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = 0;
 
 // WGL_ARB_render_texture
-static PFNWGLBINDTEXIMAGEARBPROC wglBindTexImage = 0;
-static PFNWGLRELEASETEXIMAGEARBPROC wglReleaseTexImage = 0;
-static PFNWGLSETPBUFFERATTRIBARBPROC wglSetPbufferAttrib = 0;
+PFNWGLBINDTEXIMAGEARBPROC wglBindTexImage = 0;
+PFNWGLRELEASETEXIMAGEARBPROC wglReleaseTexImage = 0;
+PFNWGLSETPBUFFERATTRIBARBPROC wglSetPbufferAttrib = 0;
 
 void ogl_init_render_texture()
 {
@@ -247,7 +247,7 @@ void ogl_init_render_texture()
 
 // Frame Buffer Object backend.
 
-static void ogl_targ_fbo_destruct(GfxTarget ifptr) {
+void ogl_targ_fbo_destruct(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	// bind the FBO so that deleted textures and render buffers
@@ -276,7 +276,7 @@ static void ogl_targ_fbo_destruct(GfxTarget ifptr) {
 	// TODO remove from linked list, then cpart_free(self).
 }
 
-static GfxRender ogl_targ_fbo_begin(GfxTarget ifptr) {
+GfxRender ogl_targ_fbo_begin(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	oglBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
@@ -299,7 +299,7 @@ static GfxRender ogl_targ_fbo_begin(GfxTarget ifptr) {
 	return &self->cx->render.render_i;
 }
 
-static void ogl_targ_fbo_end(GfxTarget ifptr) {
+void ogl_targ_fbo_end(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	// bind back to the system-provided window buffers.
@@ -315,7 +315,7 @@ static void ogl_targ_fbo_end(GfxTarget ifptr) {
 	// glDepthMask(GL_TRUE);
 }
 
-static GfxImage ogl_targ_fbo_commit(GfxTarget ifptr) {
+GfxImage ogl_targ_fbo_commit(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	// make sure rendering has ended.
@@ -324,7 +324,7 @@ static GfxImage ogl_targ_fbo_commit(GfxTarget ifptr) {
 	return self->colImg;
 }
 
-static bool ogl_targ_fbo_resize(GfxTarget ifptr, int width, int height) {
+bool ogl_targ_fbo_resize(GfxTarget ifptr, int width, int height) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 	GLenum status;
 
@@ -417,7 +417,7 @@ static bool ogl_targ_fbo_resize(GfxTarget ifptr, int width, int height) {
 	return (status == GL_FRAMEBUFFER_COMPLETE);
 }
 
-static GfxTarget_i ogl_target_fbo_i = {
+GfxTarget_i ogl_target_fbo_i = {
 	offsetof(OGLTargetImpl, refs) - offsetof(OGLTargetImpl, target_i),
 	ogl_targ_fbo_destruct,
 	ogl_targ_fbo_begin,
@@ -427,30 +427,30 @@ static GfxTarget_i ogl_target_fbo_i = {
 };
 
 /*
-static void ogl_ifbo_destruct(GfxImage ifptr) { // thunk.
+void ogl_ifbo_destruct(GfxImage ifptr) { // thunk.
 	ogl_targ_fbo_destruct(&GfxImageToImpl(ifptr)->target_i);
 }
 
-static void ogl_ifbo_upload(GfxImage ifptr, struct SurfaceData* sd, GfxImageFlags flags) {
+void ogl_ifbo_upload(GfxImage ifptr, struct SurfaceData* sd, GfxImageFlags flags) {
 	// cannot upload to a GfxTarget.
 }
 
-static void ogl_ifbo_create(GfxImage ifptr, int format, int width, int height,
+void ogl_ifbo_create(GfxImage ifptr, int format, int width, int height,
 							RGBA col, GfxImageFlags flags) {
 	// cannot re-create a GfxTarget.
 }
 
-static void ogl_ifbo_update(GfxImage ifptr, int x, int y, struct SurfaceData* sd) {
+void ogl_ifbo_update(GfxImage ifptr, int x, int y, struct SurfaceData* sd) {
 	// cannot update a GfxTarget, although it might be useful.
 }
 
-static iPair ogl_ifbo_getSize(GfxImage ifptr) {
+iPair ogl_ifbo_getSize(GfxImage ifptr) {
 	OGLTargetImpl* self = GfxImageToImpl(ifptr);
 	iPair size = { self->width, self->height };
 	return size;
 }
 
-static GfxImage_i ogl_image_fbo_i = {
+GfxImage_i ogl_image_fbo_i = {
 	offsetof(OGLTargetImpl, refs) - offsetof(OGLTargetImpl, image_i),
 	ogl_ifbo_destruct,
 	ogl_ifbo_upload,
@@ -463,7 +463,7 @@ static GfxImage_i ogl_image_fbo_i = {
 
 // Pbuffers backend.
 
-static void ogl_targ_pbuf_destruct(GfxTarget ifptr) {
+void ogl_targ_pbuf_destruct(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	if (self->rc) {
@@ -478,7 +478,7 @@ static void ogl_targ_pbuf_destruct(GfxTarget ifptr) {
 	// TODO remove from linked list, then cpart_free(self).
 }
 
-static GfxRender ogl_targ_pbuf_begin(GfxTarget ifptr) {
+GfxRender ogl_targ_pbuf_begin(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 	HGLRC hRC;
 
@@ -501,7 +501,7 @@ static GfxRender ogl_targ_pbuf_begin(GfxTarget ifptr) {
 	return &self->cx->render.render_i;
 }
 
-static void ogl_targ_pbuf_end(GfxTarget ifptr) {
+void ogl_targ_pbuf_end(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	// do nothing unless we saved a previous context.
@@ -516,7 +516,7 @@ static void ogl_targ_pbuf_end(GfxTarget ifptr) {
 	}
 }
 
-static GfxImage ogl_targ_pbuf_commit(GfxTarget ifptr) {
+GfxImage ogl_targ_pbuf_commit(GfxTarget ifptr) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	// make sure rendering has ended.
@@ -527,7 +527,7 @@ static GfxImage ogl_targ_pbuf_commit(GfxTarget ifptr) {
 	return 0;
 }
 
-static bool ogl_targ_pbuf_resize(GfxTarget ifptr, int width, int height) {
+bool ogl_targ_pbuf_resize(GfxTarget ifptr, int width, int height) {
 	OGLTargetImpl* self = GfxTargetToImpl(ifptr);
 
 	// TODO: round up to the next power of two unless non-POT
@@ -556,7 +556,7 @@ static bool ogl_targ_pbuf_resize(GfxTarget ifptr, int width, int height) {
 	return true;
 }
 
-static GfxTarget_i ogl_target_pbuf_i = {
+GfxTarget_i ogl_target_pbuf_i = {
 	offsetof(OGLTargetImpl, refs) - offsetof(OGLTargetImpl, target_i),
 	ogl_targ_pbuf_destruct,
 	ogl_targ_pbuf_begin,
@@ -568,7 +568,7 @@ static GfxTarget_i ogl_target_pbuf_i = {
 
 // GfxTarget factory.
 
-OGLTargetImpl* gfx_ogl_target_new(OGLContextImpl* context, int width, int height, GfxTargetFlags flags)
+export OGLTargetImpl* gfx_ogl_target_new(OGLContextImpl* context, int width, int height, GfxTargetFlags flags)
 {
 	OGLTargetImpl* t = cpart_new(OGLTargetImpl);
 	if (ogl_framebuffer_object) {

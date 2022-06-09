@@ -1,17 +1,29 @@
-#include "defs.h"
-#include "layers.h"
-#include "surface.h"
+// Stacking Layers library
+
+import * from defs
+import * from layers
+import * from surface
+
+typedef struct Layer Layer;
+typedef struct SurfaceLayer SurfaceLayer;
+typedef struct RenderRequest RenderRequest;
+typedef struct LayerEvent LayerEvent;
+
+typedef void (*SurfaceLayerRenderFunc)(Layer* layer, RenderRequest* req);
+typedef void (*SurfaceLayerEventFunc)(Layer* layer, LayerEvent* e);
+
+SurfaceLayer* surface_layer_create(size_t width, size_t height);
 
 struct Layer {
 	SurfaceLayerRenderFunc render;
 	SurfaceLayerEventFunc event;
 	Transform t;
-};
+}
 
 struct SurfaceLayer {
 	Layer layer;
 	SurfaceData sd;
-};
+}
 
 typedef enum GfxBlendMode { compositeBlend=1 } GfxBlendMode;
 typedef struct CompositeMode { GfxBlendMode mode; double alpha; } CompositeMode;
@@ -19,7 +31,7 @@ typedef struct CompositeMode { GfxBlendMode mode; double alpha; } CompositeMode;
 
 // SurfaceLayer
 
-static void surface_layer_render(Layer* layer, RenderRequest* req)
+void surface_layer_render(Layer* layer, RenderRequest* req)
 {
 	SurfaceLayer* sl = (SurfaceLayer*)layer;
 	CompositeMode mode = { compositeBlend, 1 };
@@ -27,11 +39,11 @@ static void surface_layer_render(Layer* layer, RenderRequest* req)
 	//req->ir->image(req->obj, &sl->sd, rect, mode);
 }
 
-static void surface_layer_event(Layer* layer, LayerEvent* e)
+void surface_layer_event(Layer* layer, LayerEvent* e)
 {
 }
 
-SurfaceLayer* surface_layer_create(size_t width, size_t height)
+export SurfaceLayer* surface_layer_create(size_t width, size_t height)
 {
 	SurfaceLayer* sl = cpart_new(SurfaceLayer);
 	sl->layer.render = surface_layer_render;
@@ -46,7 +58,7 @@ SurfaceLayer* surface_layer_create(size_t width, size_t height)
 /*
 // ButtonLayer
 
-static void button_layer_render(Layer* layer, RenderRequest* req)
+void button_layer_render(Layer* layer, RenderRequest* req)
 {
 	ButtonLayer* l = (ButtonLayer*)layer;
 	Rect rect = { 0, 0, l->size.x, l->size.y };
@@ -60,7 +72,7 @@ static void button_layer_render(Layer* layer, RenderRequest* req)
 		req->ir->image(req->obj, l->style->over, rect, l->style->overmode);
 }
 
-static void button_invalidate(ButtonLayer* l)
+void button_invalidate(ButtonLayer* l)
 {
 	LayerEvent e; e.event = layerInvalidate;
 	e.pos = untransform(&l->layer.t, 0, 0);
@@ -68,7 +80,7 @@ static void button_invalidate(ButtonLayer* l)
 	if (l->layer.parent) l->layer.parent->notify(l->layer.parent, &e);
 }
 
-static void button_layer_event(Layer* layer, LayerEvent* e)
+void button_layer_event(Layer* layer, LayerEvent* e)
 {
 	ButtonLayer* l = (ButtonLayer*)layer;
 	switch (e->event)
@@ -104,13 +116,13 @@ void toolbar_layer_create(ToolbarLayer* l, Point size)
 
 // Utils
 
-dPoint untransform(Transform* t, double x, double y)
+export dPoint untransform(Transform* t, double x, double y)
 {
 	dPoint r = { (1.0 / t->scale) * (x - t->org.x), (1.0 / t->scale) * (y - t->org.y) };
 	return r;
 }
 
-dPoint transform(Transform* t, dPoint pt)
+export dPoint transform(Transform* t, dPoint pt)
 {
 	dPoint r= { (pt.x * t->scale) + t->org.x, (pt.y * t->scale) + t->org.y };
 	return r;

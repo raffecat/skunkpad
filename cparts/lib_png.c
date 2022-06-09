@@ -4,6 +4,7 @@
 
 #include "png.h" // libpng header
 
+// PNG Library
 
 static void PNGAPI
 read_png_from_buf(png_structp png_ptr, png_bytep data, png_size_t length)
@@ -141,7 +142,7 @@ static bool load_png_impl(SurfaceData* sd, FILE *fp, dataBuf* buf)
 }
 
 
-bool load_png(SurfaceData* sd, const char* filename)
+export bool load_png(SurfaceData* sd, const char* filename)
 {
 	FILE *fp;
 	bool ok;
@@ -156,7 +157,7 @@ bool load_png(SurfaceData* sd, const char* filename)
 	return ok;
 }
 
-bool load_png_buf(SurfaceData* sd, dataBuf buf)
+export bool load_png_buf(SurfaceData* sd, dataBuf buf)
 {
 	return load_png_impl(sd, 0, &buf);
 }

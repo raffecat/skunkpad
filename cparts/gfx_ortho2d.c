@@ -1,20 +1,18 @@
-#include "defs.h"
-#include "graphics.h"
-#include "gl_impl.h"
-#include "surface.h"
+import * from defs
+import * from graphics
+import * from gl_impl
+import * from surface
 
-
-typedef struct GfxOrtho2D {
+export struct GfxOrtho2D {
 	GfxScene_i* scene_i; // for upstream; first member fast path.
 	GfxContext gctx; // from upstream scene.
 	GfxScene scene; // downstream scene to render.
 	GfxCol bgcol; // background clear colour.
-} GfxOrtho2D;
+}
 
 #define GfxSceneToSelf(PTR) impl_cast(GfxOrtho2D, scene_i, (PTR))
 
-
-static void go2d_init(GfxScene ifptr, GfxContext gctx)
+void go2d_init(GfxScene ifptr, GfxContext gctx)
 {
 	GfxOrtho2D* self = GfxSceneToSelf(ifptr);
 
@@ -31,7 +29,7 @@ static void go2d_init(GfxScene ifptr, GfxContext gctx)
 	(*self->scene)->init(self->scene, gctx);
 }
 
-static void go2d_final(GfxScene ifptr)
+void go2d_final(GfxScene ifptr)
 {
 	GfxOrtho2D* self = GfxSceneToSelf(ifptr);
 
@@ -41,7 +39,7 @@ static void go2d_final(GfxScene ifptr)
 	(*self->scene)->final(self->scene);
 }
 
-static void go2d_sized(GfxScene ifptr, int width, int height)
+void go2d_sized(GfxScene ifptr, int width, int height)
 {
 	GfxOrtho2D* self = GfxSceneToSelf(ifptr);
 
@@ -56,7 +54,7 @@ static void go2d_sized(GfxScene ifptr, int width, int height)
 	(*self->scene)->sized(self->scene, width, height);
 }
 
-static void go2d_render(GfxScene ifptr, GfxRender render)
+void go2d_render(GfxScene ifptr, GfxRender render)
 {
 	GfxOrtho2D* self = GfxSceneToSelf(ifptr);
 
@@ -70,7 +68,7 @@ static void go2d_render(GfxScene ifptr, GfxRender render)
 	(*self->scene)->render(self->scene, render);
 }
 
-static void go2d_update(GfxScene ifptr, GfxDelta delta)
+void go2d_update(GfxScene ifptr, GfxDelta delta)
 {
 	GfxOrtho2D* self = GfxSceneToSelf(ifptr);
 
@@ -78,7 +76,7 @@ static void go2d_update(GfxScene ifptr, GfxDelta delta)
 	(*self->scene)->update(self->scene, delta);
 }
 
-static GfxScene_i go2d_scene_i = {
+GfxScene go2d_scene = {
 	go2d_init,
 	go2d_final,
 	go2d_sized,
@@ -86,10 +84,10 @@ static GfxScene_i go2d_scene_i = {
 	go2d_update,
 };
 
-GfxScene createGfxOrtho2D(GfxScene scene)
+export GfxScene createGfxOrtho2D(GfxScene scene)
 {
 	GfxOrtho2D* self = cpart_new(GfxOrtho2D);
-	self->scene_i = &go2d_scene_i;
+	self->scene_i = &go2d_scene;
 	self->gctx = 0; // until init is called.
 	self->scene = scene;
 	self->bgcol.r = self->bgcol.g = self->bgcol.b = 0.5f;

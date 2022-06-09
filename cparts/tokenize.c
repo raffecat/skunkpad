@@ -1,11 +1,6 @@
-#ifndef CPART_TOKENIZE
-#define CPART_TOKENIZE
-
 // This was an idea that is not in use.
 
-#ifndef CPART_STRING
-#include "str.h"
-#endif
+import * from str
 
 // Tokenizer interface.
 
@@ -37,8 +32,6 @@ struct TokenFactory_i {
 	void* (*symbol)(TokenFactory self, TokenContext* tc);
 	void* (*ident)(TokenFactory self, TokenContext* tc);
 };
-
-
 
 // Some other choices for tokenizer design:
 
@@ -84,6 +77,3 @@ Tokenizer* createTokenizer(
 	TokenKeywordFunc keywordFunc, // keyword translation.
 	TokenSymbolFunc symbolFunc // operator symbol translation.
 );
-
-
-#endif

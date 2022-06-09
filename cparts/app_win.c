@@ -1,6 +1,19 @@
 #include "defs.h"
-#include "app.h"
 #include "ui_win_impl.h"
+
+typedef unsigned long (*app_run_func)(void* data);
+
+void init(void);
+void final(void);
+
+// cleanly exit the app - begin shutdown.
+void app_exit(void);
+
+// register a scheduler callback.
+void app_set_scheduler(app_run_func func, void* data);
+
+// enable exhaustive heap checking in debug builds.
+void app_heap_check();
 
 #include <Commctrl.h>
 #pragma comment(lib, "comctl32.lib")

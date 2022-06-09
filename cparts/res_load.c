@@ -1,3 +1,5 @@
+// Resource Loading
+
 #include "defs.h"
 #include "res_load.h"
 
@@ -188,7 +190,7 @@ static bool res_load_from_res_file(stringref name, dataBuf* result)
 	return ok;
 }
 
-dataBuf res_load(stringref name)
+export dataBuf res_load(stringref name)
 {
 	dataBuf buf;
 

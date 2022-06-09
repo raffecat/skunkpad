@@ -3,7 +3,7 @@
 
 #include <windows.h> // EXCEPTION_EXECUTE_HANDLER
 
-int cpu_supports_simd()
+export int cpu_supports_simd()
 {
 	int has_support = 0;
 

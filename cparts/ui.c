@@ -1,6 +1,3 @@
-#ifndef CPART_UI
-#define CPART_UI
-
 // UI Protocol
 // This is the interface to native UI widgets on the platform.
 
@@ -84,5 +81,3 @@ void ui_fill_rect(UI_PaintEvent* e, int left, int top, int right, int bottom, RG
 void ui_render_to_view(UI_RenderToView* r, UI_PaintEvent* e, UI_RenderFunc draw, void* context);
 
 void ui_report_error(const char* title, const char* message);
-
-#endif

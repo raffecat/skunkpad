@@ -1,7 +1,4 @@
-#ifndef CPART_UI_WIN_IMPL
-#define CPART_UI_WIN_IMPL
-
-#include "ui.h"
+import * from ui
 
 #define WINVER         0x0500   // Windows 2000
 #define _WIN32_WINDOWS 0x0500
@@ -80,5 +77,3 @@ void ui_no_events(void* obj, UI_Event* e);
 POINT ui_pointFromParam(HWND hWnd, LPARAM lParam);
 void ui_focusFirstTabStop(HWND hWnd);
 void ui_fillRect(HDC dc, int left, int top, int right, int bottom, COLORREF col);
-
-#endif

@@ -1,31 +1,12 @@
-#ifndef CPART_OGL_IMPL
-#define CPART_OGL_IMPL
+// OpenGL headers
 
-/* OpenGL headers */
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <X11/Xlib.h>
-#endif
-
-#include <GL/gl.h>
-#pragma comment(lib, "opengl32.lib")
-
-#include <GL/glu.h>
-#pragma comment(lib, "glu32.lib")
-
-#include "gl/glext.h"
-
-#ifdef _WIN32
-#include "gl/wglext.h"
-#endif
-
-#ifndef GL_CLAMP_TO_EDGE /* sigh */
-//#define GL_CLAMP_TO_EDGE 0x812F
-#endif
-
-#include "graphics.h"
+import * from <windows.h> if _WIN32
+import * from <X11/Xlib.h> if not _WIN32
+import * from <GL/gl.h> pragma "opengl32.lib"
+import * from <GL/glu.h> pragma "glu32.lib"
+import * from "gl/glext.h"
+import * from "gl/wglext.h" if _WIN32
+import * from graphics
 
 typedef struct OGLImageImpl OGLImageImpl;
 typedef struct OGLTargetImpl OGLTargetImpl;
@@ -46,15 +27,6 @@ bool ogl_has_ext_extension(const char* name);
 
 void ogl_init_framebuffer_object();
 void ogl_init_render_texture();
-
-
-// GfxImage private interface.
-/*
-typedef struct GfxImageImpl_i {
-	GfxImage_i image; // embed the public interface.
-	void (*bind)(OGLImageImpl* self);
-} GfxImageImpl_i;
-*/
 
 
 // GfxRender implementation.
@@ -163,6 +135,3 @@ extern PFNGLGENERATEMIPMAPPROC oglGenerateMipmap;
 extern PFNGLBLITFRAMEBUFFERPROC oglBlitFramebuffer;
 extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC oglRenderbufferStorageMultisample;
 extern PFNGLFRAMEBUFFERTEXTURELAYERPROC oglFramebufferTextureLayer;
-
-
-#endif

@@ -1,17 +1,7 @@
-#ifndef CPART_DEFS
-#define CPART_DEFS
-
-#include <stdlib.h> // malloc, free, size_t, NULL
-#include <stddef.h> // offsetof
-#include <string.h> // memset, memcpy, etc
-#include <assert.h> // assert
-
-#ifdef _WIN32
-#define WINDOWS
-#define CDECL __cdecl
-#else
-#define CDECL
-#endif
+import { malloc, free, size_t, NULL } from <stdlib.h>
+import { offsetof } from <stddef.h>
+import { memset, memcpy } from <string.h>
+import { assert } from <assert.h>
 
 // Duly copied and pasted as directed by Tom Forsyth.
 // Well, except that his names are all completely wrong.
@@ -32,10 +22,6 @@ typedef unsigned int uint_fast8_t;
 typedef unsigned int uint_fast16_t;
 typedef unsigned int uint_fast32_t;
 
-#ifndef __cplusplus
-typedef enum bool { false=0, true=1 } bool;
-#endif
-
 typedef struct dPair { double x, y; } dPair;
 typedef struct dRect { double left, top, right, bottom; } dRect;
 typedef struct Transform { dPair org; double scale; } Transform;
@@ -53,8 +39,6 @@ typedef struct RGBA16 { uint16 r,g,b,a; } RGBA16;
 // TODO: move to transform lib?
 dPair transform(Transform* t, dPair pt);
 dPair untransform(Transform* t, double x, double y);
-
-#ifndef __cplusplus
 
 #define cpart_new(STRUCT) calloc(1, sizeof(struct STRUCT))
 #define cpart_alloc(SIZE) malloc((SIZE))
@@ -77,24 +61,7 @@ dPair untransform(Transform* t, double x, double y);
 void CDECL trace(const char* fmt, ...);
 void memtest();
 
-#endif // __cplusplus
-
 typedef struct dataBuf { byte* data; size_t size;
 						 void (*free)(struct dataBuf* buf); } dataBuf;
 
-#include "str.h"
-
-/*
-#include "typeref.h"
-
-module create_module();
-object create(module m, const char* name);
-
-void set_bool(object o, const char* name, bool val);
-void set_int(object o, const char* name, int val);
-void set_ipairv(object o, const char* name, int x, int y);
-void set_strc(object o, const char* name, const char* val);
-void set_obj(object o, const char* name, object val);
-*/
-
-#endif
+import * from str

@@ -1,3 +1,5 @@
+// JPEG Library
+
 #include "defs.h"
 #include "surface.h"
 #include "lib_jpeg.h"
@@ -6,8 +8,7 @@
 
 #include <stdio.h>
 
-
-bool load_jpeg(SurfaceData* sd, const char* filename)
+export bool load_jpeg(SurfaceData* sd, const char* filename)
 {
 	FILE *fp;
 

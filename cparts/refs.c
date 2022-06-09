@@ -1,6 +1,3 @@
-#ifndef CPART_REFS
-#define CPART_REFS
-
 // Reference counted object and smart pointers.
 
 #include <assert.h>
@@ -46,5 +43,3 @@ public:
 	inline ~ref() throw() { if (o) o->release(); o=0; }
 private: T* o;
 };
-
-#endif

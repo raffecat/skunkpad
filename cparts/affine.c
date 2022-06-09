@@ -8,14 +8,13 @@
 // y' = [ Uy, Vy, Ty ] [ y ]
 // 1    [  0,  0,  1 ] [ 1 ] (not stored)
 
+export type Vec2 = { float x, y }
+
 struct Affine2D {
 	float Ux, Uy; // Column 1: X basis (x,y)
 	float Vx, Vy; // Column 2: Y basis (x,y)
 	float Tx, Ty; // Column 3: translation
 }
-
-let Affine2D = type const ref Affine2D;
-let Affine2D_out = type ref Affine2D;
 
 export const identity = Affine2D(
 	1.0, 0.0, // Column 1: X basis (x,y)
@@ -28,53 +27,30 @@ export const identity = Affine2D(
 // ... because the compiler cannot vary the implementation to perform
 //     in-place updates where safe to do so.
 
-def affine_set_identity() Affine2D result {
-	result.Ux = 1.0f;
-	result.Vy = 1.0f;
-	result.Vx = 0.0f;
-	result.Tx = 0.0f;
-	result.Uy = 0.0f;
-	result.Ty = 0.0f;
-}
-
-
 // set a translation-only affine transform.
-def affine_translate(float x, float y) Affine2D result {
-	result.Ux = 1.0f;
-	result.Vy = 1.0f;
-	result.Vx = 0.0f;
-	result.Uy = 0.0f;
-	result.Tx = x;
-	result.Ty = y;
+Affine2D affine_translate(float x, y) {
+	return { Ux: 1.0f, Vy: 1.0f, Vx: 0.0f, Uy: 0.0f, Tx: x, Ty: y }
 }
-
 
 // set a scale-only affine transform.
-def affine_scale(float sx, float sy) Affine2D result
-{
-	result.Ux = sx;
-	result.Vy = sy;
-	result.Vx = 0.0f;
-	result.Uy = 0.0f;
-	result.Tx = 0.0f;
-	result.Ty = 0.0f;
+Affine2D affine_scale(float sx, sy) {
+	return { Ux: sx, Vy: sy, Vx: 0.0f, Uy: 0.0f, Tx: 0.0f, Ty: 0.0f }
 }
-
 
 // multiply the left affine matrix by the right (concatenate transforms)
 // NB. result cannot alias left or right; left can alias right.
-Affine2D affine_multiply(Affine2D left, Affine2D right)
-{
+Affine2D affine_multiply(Affine2D left, right) {
 	// 12 multiply, 8 add (2x2 . U,V and 2x3 . Origin)
 	//assert(result != left && result != right);
-	result.Ux = left.Ux * right.Ux + left.Vx * right.Uy;
-	result.Vx = left.Ux * right.Vx + left.Vx * right.Vy;
-	result.Tx = left.Ux * right.Tx + left.Vx * right.Ty + left.Tx;
-	result.Uy = left.Uy * right.Ux + left.Vy * right.Uy;
-	result.Vy = left.Uy * right.Vx + left.Vy * right.Vy;
-	result.Ty = left.Uy * right.Tx + left.Vy * right.Ty + left.Ty;
+	return {
+		Ux : left.Ux * right.Ux + left.Vx * right.Uy,
+		Vx : left.Ux * right.Vx + left.Vx * right.Vy,
+		Tx : left.Ux * right.Tx + left.Vx * right.Ty + left.Tx,
+		Uy : left.Uy * right.Ux + left.Vy * right.Uy,
+		Vy : left.Uy * right.Vx + left.Vy * right.Vy,
+		Ty : left.Uy * right.Tx + left.Vy * right.Ty + left.Ty,
+	}
 }
-
 
 // in C this must be a batch operation that takes arrays.
 // ideally define it for one element and generate stream/array batch code.
@@ -88,16 +64,22 @@ Affine2D affine_multiply(Affine2D left, Affine2D right)
 // y' = [ Uy, Vy, Ty ] [ y ]
 // 1    [  0,  0,  1 ] [ 1 ]
 
-void affine_transform(Affine2D t, float* src, float* dest, int count)
-{
-	while (count--) {
-		float x = src[0], y = src[1]; // allow dest to alias src.
-		dest[0] = x * t.Ux + y * t.Vx + t.Tx;
-		dest[1] = x * t.Uy + y * t.Vy + t.Ty;
-		dest += 2; src += 2;
+void affine_transform(Affine2D t, Vec2[] src, Vec2[] dest ?= src) {
+	for s,d in src,dest {
+		// since mutation is not the norm, use <- to indicate it
+		d <- { x: s.x * t.Ux + s.y * t.Vx + t.Tx,
+		       y: s.x * t.Uy + s.y * t.Vy + t.Ty }
 	}
 }
 
+// the compiler can perform this in-place if the caller assigns the result
+// into the src array: src <- affine_transform(t, src)
+// in that case, it can ensure that all reads per item happen before any writes,
+// and also constrain src to a single read pass within the function.
+
+export affine_transform(Affine2D t, Vec2[] src) => Vec2[] =
+	[{ x: s.x * t.Ux + s.y * t.Vx + t.Tx,
+	   y: s.x * t.Uy + s.y * t.Vy + t.Ty } for s in src]
 
 // untransform (inverse transform) an array of x,y pairs.
 // transform points to 6 floats; src and dest point to 2*count floats.
@@ -199,3 +181,7 @@ Affine2D affine_post_scale(Affine2D t, float sx, float sy)
 	result.Tx = t.Tx;
 	result.Ty = t.Ty;
 }
+
+// tiles for rotated rendering:
+// 8x8 RGBA = 256 (4 cachelines)
+// 8x8 tiles = 16384 (256 cachelines)

@@ -1,11 +1,10 @@
-#include "defs.h"
-#include "glview.h"
-#include "graphics.h"
-#include "ui_win_impl.h"
-#include "gl_impl.h"
+import * from defs
+import * from glview
+import * from graphics
+import * from ui_win_impl
+import * from gl_impl
 
-#include <mmsystem.h> // timeGetTime
-#pragma comment(lib, "winmm.lib")
+import { timeGetTime } from <mmsystem.h> link "winmm.lib"
 
 
 // TODO: fullscreen mode still assumes too much; this behaviour really
@@ -20,9 +19,9 @@
 // PFD_SWAP_EXCHANGE | PFD_SUPPORT_COMPOSITION
 
 
-static ATOM g_wndCls = 0;
+ATOM g_wndCls = 0;
 
-struct GLView {
+export struct GLView {
 	UI_WIN_FIELDS;
 	UI_Window* parent;
 	HDC dc;
@@ -40,7 +39,7 @@ struct GLView {
 	RECT oldRect;
 };
 
-static bool RenderGLView(GLView* view)
+bool RenderGLView(GLView* view)
 {
 	RECT rect;
 	if (!view->rc || !IsWindowVisible(view->handle) || IsIconic(view->handle) ||
@@ -55,7 +54,7 @@ static bool RenderGLView(GLView* view)
 	return !!SwapBuffers(view->dc);
 }
 
-static void ResizeGLView(GLView* view, int width, int height)
+void ResizeGLView(GLView* view, int width, int height)
 {
 	if (width > 0 && height > 0) {
 		glViewport(0, 0, (GLsizei)width, (GLsizei)height);
@@ -64,7 +63,7 @@ static void ResizeGLView(GLView* view, int width, int height)
 		(*view->backend)->sized(view->backend, width, height);
 }
 
-static void ReleaseGfxContext(GLView* view)
+void ReleaseGfxContext(GLView* view)
 {
 	(*view->backend)->final(view->backend);
 	wglMakeCurrent( NULL, NULL );
@@ -72,14 +71,14 @@ static void ReleaseGfxContext(GLView* view)
 	view->rc = NULL;
 }
 
-static HWND FindTopWindow(HWND hWnd)
+HWND FindTopWindow(HWND hWnd)
 {
 	HWND hParent;
 	while ((hParent = GetParent(hWnd))) hWnd = hParent;
 	return hWnd;
 }
 
-static LRESULT GLWndProc(UI_WindowHook* hook, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT GLWndProc(UI_WindowHook* hook, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	GLView* view = (GLView*) hook;
 	switch (message)
@@ -151,7 +150,7 @@ static LRESULT GLWndProc(UI_WindowHook* hook, UINT message, WPARAM wParam, LPARA
 	return UI_SendEventsProc(hook, message, wParam, lParam);
 }
 
-static void DestroyGLWindow(GLView* view)
+void DestroyGLWindow(GLView* view)
 {
 	if (view->handle) {
 		DestroyWindow(view->handle);
@@ -159,7 +158,7 @@ static void DestroyGLWindow(GLView* view)
 	}
 }
 
-static int GetDisplayDepth()
+int GetDisplayDepth()
 {
 	DEVMODE devMode;
 	devMode.dmSize = sizeof(DEVMODE);
@@ -168,7 +167,7 @@ static int GetDisplayDepth()
 	return (int) devMode.dmBitsPerPel;
 }
 
-static bool CreateOGLContext(GLView* view)
+bool CreateOGLContext(GLView* view)
 {
 	PIXELFORMATDESCRIPTOR pfd;
 	int nPixelFormat;
@@ -224,7 +223,7 @@ static bool CreateOGLContext(GLView* view)
 	return true;
 }
 
-void CreateGLWindow(GLView* w, HWND hParent, int x, int y, int width, int height)
+export void CreateGLWindow(GLView* w, HWND hParent, int x, int y, int width, int height)
 {
 	UI_CreateParams params = { (UI_Window*)w, GLWndProc };
 	CreateWindowEx(WS_EX_NOPARENTNOTIFY, "GLView_WindowClass", "",
@@ -235,7 +234,7 @@ void CreateGLWindow(GLView* w, HWND hParent, int x, int y, int width, int height
 		CreateOGLContext(w);
 }
 
-GLView* glview_create(UI_Window* parent, UI_EventFunc events, void* context)
+export GLView* glview_create(UI_Window* parent, UI_EventFunc events, void* context)
 {
 	GLView* view = cpart_new(GLView);
 	view->parent = parent;
@@ -259,7 +258,7 @@ GLView* glview_create(UI_Window* parent, UI_EventFunc events, void* context)
 	return view;
 }
 
-void glview_resize(GLView* view, int width, int height)
+export void glview_resize(GLView* view, int width, int height)
 {
 	if (view->active && /*!view->fullscreen &&*/
 		view->handle && width > 0 && height > 0)
@@ -276,13 +275,13 @@ void glview_set_scene(GLView* view, GfxScene scene)
 }
 */
 
-void glview_set_scene(GLView* view, GLViewSceneFunc scene, void* data)
+export void glview_set_scene(GLView* view, GLViewSceneFunc scene, void* data)
 {
 	view->scene = scene;
 	view->scene_data = data;
 }
 
-void glview_fullscreen(GLView* view)
+export void glview_fullscreen(GLView* view)
 {
 	MONITORINFO mi = { sizeof(mi) };
 	HWND hTopWnd;
@@ -381,7 +380,7 @@ void glview_fullscreen(GLView* view)
 	//	SetFocus(view->handle);
 }
 
-void glview_windowed(GLView* view)
+export void glview_windowed(GLView* view)
 {
 	HWND hTopWnd;
 	//int width, height;
@@ -459,7 +458,7 @@ void glview_windowed(GLView* view)
 	//	SetFocus(view->handle);
 }
 
-void glview_render(GLView* view)
+export void glview_render(GLView* view)
 {
 	if (view->active) {
 		DWORD now = timeGetTime();
@@ -479,13 +478,13 @@ void glview_render(GLView* view)
 	}
 }
 
-void glview_destroy(GLView* view)
+export void glview_destroy(GLView* view)
 {
 	DestroyGLWindow(view);
 	free(view);
 }
 
-GfxContext glview_get_context(GLView* view)
+export GfxContext glview_get_context(GLView* view)
 {
 	return (*view->backend)->getContext(view->backend);
 }

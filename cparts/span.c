@@ -1,8 +1,3 @@
-#ifndef CPART_SPAN
-#define CPART_SPAN
-
-//#include <xmmintr.h>
-
 // Span rasterizer.
 
 typedef struct SpanSource SpanSource;
@@ -32,6 +27,3 @@ struct AffineSource {
 	SpanBuffer buffer;
 	AffineState affine;
 };
-
-
-#endif

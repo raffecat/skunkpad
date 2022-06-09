@@ -1,10 +1,4 @@
-#ifndef CPART_STREAM_PROTO
-#define CPART_STREAM_PROTO
-
-
 // Stream protocol.
-
-typedef struct StreamIter StreamIter;
 
 struct StreamIter {
 	// the stream consumer may advance the data pointer and reduce
@@ -18,7 +12,7 @@ struct StreamIter {
 	// data and remain may be in any state (callee should ignore them.)
 	// callee may raise an exception or return bool success/fail.
 	bool (*more)(StreamIter* iter);
-};
+}
 
 
 // stream owners:
@@ -49,6 +43,3 @@ struct StreamIter {
 
 // read-write interaction:
 // when using the same iterator, purge/flush are unnecessary.
-
-
-#endif

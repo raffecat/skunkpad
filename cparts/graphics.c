@@ -1,7 +1,4 @@
-#ifndef CPART_GRAPHICS
-#define CPART_GRAPHICS
-
-#include "affine.h"
+import * from affine
 
 struct SurfaceData;
 
@@ -20,13 +17,13 @@ typedef struct GfxCol { float r, g, b, a; } GfxCol;
 
 // GfxImage interface.
 
-typedef enum GfxImageFormat {
+enum GfxImageFormat {
 	gfxFormatA8 = 1,
 	gfxFormatRGB8 = 3,
 	gfxFormatRGBA8 = 4,
-} GfxImageFormat;
+}
 
-typedef enum GfxImageFlags {
+enum GfxImageFlags {
 	// The image is continuous in X (tiles left-to-right)
 	// Non-power-of-two images will be scaled up if necessary.
 	gfxImgWrapX			= 1,
@@ -50,27 +47,27 @@ typedef enum GfxImageFlags {
 	gfxImageRenderTarget = 128,
 	// internal: mask unused flags bits.
 	gfx_imageFlagUnused	= 256,
-} GfxImageFlags;
+}
 
-struct GfxImage_i {
+interface GfxImage {
 	// these private fields implement reference counting.
 	// use retain() and release() global functions.
 	ptrdiff_t _ref_disp;
 	void (*_destruct)(GfxImage self);
 	// upload image data to an image object.
-	void (*upload)(GfxImage self, struct SurfaceData* sd, GfxImageFlags flags);
+	void (*upload)(GfxImage self, SurfaceData sd, GfxImageFlags flags);
 	// create an image filled with a solid colour.
 	bool (*create)(GfxImage self, GfxImageFormat format,
 				   unsigned int width, unsigned int height,
 				   RGBA col, int /* GfxImageFlags */ flags);
 	// upload image data to a sub-rect of an image object.
 	// NB. the coordinates (x,y) are relative to the bottom-left corner.
-	void (*update)(GfxImage self, int x, int y, struct SurfaceData* sd);
+	void (*update)(GfxImage self, int x, int y, SurfaceData sd);
 	// retrieve the allocated image dimensions.
 	iPair (*getSize)(GfxImage self);
 	// read back the image data.
-	void (*read)(GfxImage self, struct SurfaceData* sd);
-};
+	void (*read)(GfxImage self, SurfaceData sd);
+}
 
 /*
 	// allocate an image of the requested size and usage.
@@ -97,7 +94,7 @@ struct GfxImage_i {
 
 // A shader is an instance of a GfxProgram with argument bindings.
 
-typedef enum GfxBlendFactor {
+enum GfxBlendFactor {
 	gfxZero = 0,
 	gfxOne = 1,
 	gfxSrcCol,
@@ -108,9 +105,9 @@ typedef enum GfxBlendFactor {
 	gfxOneMinusDstAlpha,
 	gfxDstCol,
 	gfxOneMinusDstCol,
-} GfxBlendFactor;
+}
 
-struct GfxShader_i {
+interface GfxShader {
 	// these private fields implement reference counting.
 	// use retain() and release() global functions.
 	ptrdiff_t _ref_disp;
@@ -121,7 +118,7 @@ struct GfxShader_i {
 
 	// bind an image object to an image parameter.
 	void (*bindImage)(GfxShader self, unsigned int param, GfxImage image);
-};
+}
 
 #define GfxShader_setBlendFunc(self,srcFactor,dstFactor) (*(self))->setBlendFunc((self),(srcFactor),(dstFactor))
 #define GfxShader_bindImage(self,param,image) (*(self))->bindImage((self),(param),(image))
@@ -129,7 +126,7 @@ struct GfxShader_i {
 
 // GfxTarget interface.
 
-typedef enum GfxTargetFlags {
+enum GfxTargetFlags {
 	gfxTargetHasColour			= 1,  // allocate colour buffer.
 	gfxTargetHasDepth			= 2,  // allocate depth buffer.
 	gfxTargetHasStencil			= 4,  // allocate stencil buffer.
@@ -138,11 +135,11 @@ typedef enum GfxTargetFlags {
 	gfxTargetKeepStencil		= 32, // render to stencil texture.
 	gfxTargetKeepDepthStencil	= 64, // render to packed depth-stencil texture.
 	gfx_bufferFlagUnused		= 128,
-} GfxTargetFlags;
+}
 
 typedef void (*GfxRenderFunc)(void* data, GfxRender render);
 
-struct GfxTarget_i {
+interface GfxTarget {
 	// these private fields implement reference counting.
 	// use retain() and release() global functions.
 	ptrdiff_t _ref_disp;
@@ -157,7 +154,7 @@ struct GfxTarget_i {
 	GfxImage (*commit)(GfxTarget self);
 	// resize the target surface area.
 	bool (*resize)(GfxTarget self, int width, int height);
-};
+}
 
 #define GfxTarget_begin(SELF) (*(SELF))->begin((SELF))
 #define GfxTarget_end(SELF) (*(SELF))->end((SELF))
@@ -219,15 +216,15 @@ enum GfxVertexFormats { // no, this is a bad idea.
 	gfxVertUV  = 0x0005,
 	gfxVertUVS = 0x0006,
 	gfxVertUVST= 0x0007,
-};
+}
 
 enum GfxIndexFormats {
 	gfxIndex8  = 0,
 	gfxIndex16 = 1,
 	gfxIndex32 = 2,
-};
+}
 
-struct GfxRender_i {
+interface GfxRender {
 	void (*select)(GfxRender self, GfxImage image);
 	void (*selectNone)(GfxRender self);
 	void (*quads2d)(GfxRender self, int num, const float* verts, const float* coords);
@@ -249,7 +246,7 @@ struct GfxRender_i {
 	// for best performance the image should be created with the
 	// gfxImgRenderTarget flag, otherwise extra copying may be performed.
 	void (*setRenderTarget)(GfxRender self, GfxImage target);
-};
+}
 
 #define GfxRender_select(SELF,IMG) (*(SELF))->select((SELF),(IMG))
 #define GfxRender_selectNone(SELF) (*(SELF))->selectNone((SELF))
@@ -275,13 +272,13 @@ struct GfxRender_i {
 
 typedef long GfxDelta;
 
-struct GfxScene_i {
+interface GfxScene {
 	void (*init)(GfxScene self, GfxContext context);
 	void (*final)(GfxScene self);
 	void (*sized)(GfxScene self, int width, int height);
 	void (*render)(GfxScene self, GfxRender gfx);
 	void (*update)(GfxScene self, GfxDelta delta);
-};
+}
 
 
 // GfxScene factories.
@@ -295,7 +292,7 @@ GfxScene createGfxOrtho2D(GfxScene scene);
 
 // Implemented by the graphics library backend for front-end views.
 
-struct GfxBackend_i {
+interface GfxBackend {
 	void (*init)(GfxBackend self);
 	void (*final)(GfxBackend self);
 	void (*sized)(GfxBackend self, int width, int height);
@@ -303,7 +300,7 @@ struct GfxBackend_i {
 	void (*update)(GfxBackend self, GfxDelta delta);
 	void (*setScene)(GfxBackend self, GfxScene scene);
 	GfxContext (*getContext)(GfxBackend self); // sigh.
-};
+}
 
 GfxBackend createGfxOpenGLBackend();
 
@@ -312,8 +309,7 @@ GfxBackend createGfxOpenGLBackend();
 
 // A rendering context attached to a GfxBackend.
 
-struct GfxContext_i
-{
+interface GfxContext {
 /*
 	// these private fields implement reference counting.
 	// use retain() and release() global functions.
@@ -367,13 +363,10 @@ struct GfxContext_i
 	GfxTarget (*createIndexBuffer)(GfxContext self, size_t size,
 		GfxVertexFormat format, GfxTargetFlags flags);
 */
-};
+}
 
 #define GfxContext_createImage(SELF) (*(SELF))->createImage((SELF))
 #define GfxContext_createTarget(SELF,FORMAT,WIDTH,HEIGHT,SAMPLES,FLAGS) (*(SELF))->createTarget((SELF),(FORMAT),(WIDTH),(HEIGHT),(SAMPLES),(FLAGS))
 #define GfxContext_createShader(self) (*(self))->createShader((self))
 #define GfxContext_getRenderer(self) (*(self))->getRenderer((self))
 #define GfxContext_getTargetSize(self) (*(self))->getTargetSize((self))
-
-
-#endif

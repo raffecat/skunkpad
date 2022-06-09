@@ -1,12 +1,6 @@
-#ifndef CPART_DRAW
-#define CPART_DRAW
+import * from graphics
 
-#include "graphics.h"
-
-// interface declarations:
-typedef struct GfxDraw_i GfxDraw_i, **GfxDraw;
-
-typedef enum GfxBlendMode {
+export enum GfxBlendMode {
 	gfxBlendUnknown = 0, // blending state is unknown.
 	gfxBlendCopy,       // (GL_ONE, GL_ZERO)
 	gfxBlendNormal,     // (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -28,19 +22,19 @@ typedef enum GfxBlendMode {
 	gfxBlendDodge,      // A / (1-B)
 	gfxBlendBurn,       // 1 - (1-A) / B
 	_gfxBlendModeSize=0x7f
-} GfxBlendMode;         // NB. A=dst, B=src !
+}         // NB. A=dst, B=src !
 
-typedef enum GfxCapStyle {
+export enum GfxCapStyle {
 	gfxCapButt = 0,
 	gfxCapRound,
 	gfxCapSquare,
-} GfxCapStyle;
+}
 
-typedef enum GfxJoinStyle {
+export enum GfxJoinStyle {
 	gfxJoinMiter = 0,
 	gfxJoinRound,
 	gfxJoinBevel,
-} GfxJoinStyle;
+}
 
 
 // GfxDraw interface.
@@ -60,7 +54,7 @@ typedef enum GfxJoinStyle {
 // fillText, strokeText, measureText
 // drawImage(x,y,w,h), drawImage(srcRect,dstRect)
 
-struct GfxDraw_i {
+export interface GfxDraw {
 	// push current drawing state to the state stack.
 	void (*save)(GfxDraw self);
 	// restore drawing state from the state stack.
@@ -118,7 +112,7 @@ struct GfxDraw_i {
 	void (*setRenderTarget)(GfxDraw self, GfxImage target);
 	// restore the system framebuffer target.
 	void (*clearRenderTarget)(GfxDraw self);
-};
+}
 
 #define GfxDraw_save(self) (*(self))->save((self))
 #define GfxDraw_restore(self) (*(self))->restore((self))
@@ -152,6 +146,3 @@ struct GfxDraw_i {
 // GfxDraw factory.
 
 GfxDraw createGfxDraw(GfxContext context);
-
-
-#endif

@@ -1,19 +1,14 @@
-#ifndef CPART_IMAGE_DATA
-#define CPART_IMAGE_DATA
-
 
 #define REF_FIELDS int refs; void (*release)(void* p)
 
 
 // ImageData - borrowed buffer pattern.
 
-typedef enum ImageFormat { img_fmt_none=0, img_fmt_lum, img_fmt_lum_alpha,
-						   img_fmt_rgb, img_fmt_rgba } ImageFormat;
+enum ImageFormat { img_fmt_none=0, img_fmt_lum, img_fmt_lum_alpha, img_fmt_rgb, img_fmt_rgba }
 
-typedef struct ImageData { ImageFormat format; size_t width; size_t height;
-						   size_t stride; void* data; } ImageData;
+struct ImageData { ImageFormat format; size_t width; size_t height; size_t stride; void* data; }
 
-typedef struct ImageDataRef { ImageData img; REF_FIELDS; } ImageDataRef;
+struct ImageDataRef { ImageData img; REF_FIELDS; }
 
 
 // ImageSource - standard source of image data.
@@ -35,9 +30,4 @@ typedef ImageData* (*ImageSourceFunc)(void* self, ImageData* result, ImageData* 
 struct ImageSource;
 typedef void (*ImageSourceRelease)(struct ImageSource* d);
 
-typedef struct zzImageSource { ImageSourceFunc source;
-							 ImageSourceRelease release; } zzImageSource;
-
-
-
-#endif
+struct zzImageSource { ImageSourceFunc source; ImageSourceRelease release; } zzImageSource;

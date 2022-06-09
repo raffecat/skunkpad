@@ -1,7 +1,7 @@
-#include "defs.h"
-#include "graphics.h"
-#include "gl_impl.h"
-#include "surface.h"
+import * from defs
+import * from graphics
+import * from gl_impl
+import * from gl_impl
 
 
 // TODO: detect these extensions:
@@ -16,14 +16,9 @@
 ALPHA, LUMINANCE, LUMINANCE_ALPHA, INTENSITY, RED, RG, RGB, RGBA,
 FLOAT_R_NV, FLOAT_RG_NV, FLOAT_RGB_NV, and FLOAT_RGBA_NV */
 
-static const c_ogl_renderable[] = { 0,
-	GL_ALPHA, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
-
-static const c_ogl_internal[] = { 0,
-	GL_ALPHA8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8 };
-
-static const c_ogl_format[] = { 0,
-	GL_ALPHA, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
+const c_ogl_renderable[] = { 0, GL_ALPHA, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
+const c_ogl_internal[] = { 0, GL_ALPHA8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8 };
+const c_ogl_format[] = { 0, GL_ALPHA, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
 
 // "Use PBO to upload multiple parts of the texture simultaneously
 //  and asynchronously."
@@ -35,7 +30,7 @@ static const c_ogl_format[] = { 0,
 
 // upscale a source image to the nearest powers of two and upload
 // without generating mipmaps.
-static bool ogl_img_upscale_pow2(SurfaceData* sd)
+bool ogl_img_upscale_pow2(SurfaceData* sd)
 {
 	int width, height, bytespp;
 	int pow_width = 0, pow_height = 0;
@@ -98,7 +93,7 @@ static bool ogl_img_upscale_pow2(SurfaceData* sd)
 	return true;
 }
 
-static void ogl_img_size_changed(OGLImageImpl* tex, int width, int height)
+void ogl_img_size_changed(OGLImageImpl* tex, int width, int height)
 {
 	tex->width = width; tex->height = height;
 	tex->flags &= ~(gfxImageFlagIsPotX | gfxImageFlagIsPotY);
@@ -111,7 +106,7 @@ static void ogl_img_size_changed(OGLImageImpl* tex, int width, int height)
 	if (height == 1) tex->flags |= gfxImageFlagIsPotY;
 }
 
-static bool ogl_img_prepare_upload(OGLImageImpl* tex, SurfaceData* sd)
+bool ogl_img_prepare_upload(OGLImageImpl* tex, SurfaceData* sd)
 {
 	if (sd->format < 1 || sd->format > 4)
 		return false;
@@ -137,7 +132,7 @@ static bool ogl_img_prepare_upload(OGLImageImpl* tex, SurfaceData* sd)
 	return true;
 }
 
-static bool ogl_img_upload(GfxImage ifptr, SurfaceData* sd, GfxImageFlags flags) {
+bool ogl_img_upload(GfxImage ifptr, SurfaceData* sd, GfxImageFlags flags) {
 	OGLImageImpl* tex = GfxImageToImpl(ifptr);
 	// TODO: use glTexSubImage2D if texture has been loaded already?
 	tex->flags = flags & (gfx_imageFlagUnused-1); // ignore extra bits.
@@ -150,7 +145,7 @@ static bool ogl_img_upload(GfxImage ifptr, SurfaceData* sd, GfxImageFlags flags)
 
 		// TODO: allow the use of compressed texture formats.
 
-		// push up texture priority for static textures.
+		// push up texture priority for textures.
 		//{GLclampf priority = 1.0f;
 		//glPrioritizeTextures(1, &tex->id, &priority);}
 
@@ -216,7 +211,7 @@ static bool ogl_img_upload(GfxImage ifptr, SurfaceData* sd, GfxImageFlags flags)
 	return false;
 }
 
-static bool ogl_img_create(GfxImage ifptr, GfxImageFormat format, unsigned int width, unsigned int height, RGBA col, int flags) {
+bool ogl_img_create(GfxImage ifptr, GfxImageFormat format, unsigned int width, unsigned int height, RGBA col, int flags) {
 	OGLImageImpl* self = GfxImageToImpl(ifptr);
 	if (flags & gfxImageDoNotFill) {
 		GLenum internal;
@@ -284,7 +279,7 @@ static bool ogl_img_create(GfxImage ifptr, GfxImageFormat format, unsigned int w
 	return false;
 }
 
-static void ogl_img_update(GfxImage ifptr, int x, int y, SurfaceData* sd)
+void ogl_img_update(GfxImage ifptr, int x, int y, SurfaceData* sd)
 {
 	OGLImageImpl* tex = GfxImageToImpl(ifptr);
 	if (ogl_img_prepare_upload(tex, sd))
@@ -303,13 +298,13 @@ static void ogl_img_update(GfxImage ifptr, int x, int y, SurfaceData* sd)
 	}
 }
 
-static iPair ogl_img_getSize(GfxImage ifptr) {
+iPair ogl_img_getSize(GfxImage ifptr) {
 	OGLImageImpl* self = GfxImageToImpl(ifptr);
 	iPair size = { self->width, self->height };
 	return size;
 }
 
-static void ogl_img_read(GfxImage ifptr, SurfaceData* sd) {
+void ogl_img_read(GfxImage ifptr, SurfaceData* sd) {
 	OGLImageImpl* self = GfxImageToImpl(ifptr);
 	if (self->id) {
 		// glActiveTexture specifies which unit is re-bound here.
@@ -333,19 +328,19 @@ static void ogl_img_read(GfxImage ifptr, SurfaceData* sd) {
 	}
 }
 
-static void ogl_img_release(OGLImageImpl* tex) {
+void ogl_img_release(OGLImageImpl* tex) {
 	glDeleteTextures(1, &tex->id);
 	tex->id = 0;
 	tex->width = 0; tex->height = 0; // invariant.
 }
 
-static void ogl_img_destruct(GfxImage ifptr) {
+void ogl_img_destruct(GfxImage ifptr) {
 	OGLImageImpl* self = GfxImageToImpl(ifptr);
 	ogl_img_release(self);
 	// TODO remove from linked list, then cpart_free(self).
 }
 
-static GfxImage_i ogl_image_i = {
+GfxImage ogl_image_i = {
 	offsetof(OGLImageImpl, refs) - offsetof(OGLImageImpl, image_i),
 	ogl_img_destruct,
 	ogl_img_upload,
@@ -355,7 +350,7 @@ static GfxImage_i ogl_image_i = {
 	ogl_img_read,
 };
 
-static OGLImageImpl* ogl_img_new()
+OGLImageImpl* ogl_img_new()
 {
 	OGLImageImpl* tex = cpart_new(OGLImageImpl);
 	tex->image_i = &ogl_image_i;
@@ -387,7 +382,7 @@ struct OGLShaderImpl {
 
 #define GfxShaderToImpl(PTR) ((OGLShaderImpl*)(PTR))
 
-static void ogl_sdr_destruct(GfxShader ifptr) {
+void ogl_sdr_destruct(GfxShader ifptr) {
 	OGLShaderImpl* self = GfxShaderToImpl(ifptr);
 	{int i; for (i=0; i<oglShaderMaxImages; i++)
 		if (self->images[i])
@@ -395,13 +390,13 @@ static void ogl_sdr_destruct(GfxShader ifptr) {
 	}
 }
 
-static GLenum c_ogl_blend_func[] = { // GfxBlendFactor -> GLenum
+GLenum c_ogl_blend_func[] = { // GfxBlendFactor -> GLenum
 	GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR,
 	GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_DST_ALPHA,
 	GL_ONE_MINUS_DST_ALPHA, GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR
 };
 
-static void ogl_sdr_setBlendFunc(GfxShader ifptr, GfxBlendFactor srcFactor, GfxBlendFactor dstFactor)
+void ogl_sdr_setBlendFunc(GfxShader ifptr, GfxBlendFactor srcFactor, GfxBlendFactor dstFactor)
 {
 	OGLShaderImpl* self = GfxShaderToImpl(ifptr);
 	self->blendSrc = c_ogl_blend_func[srcFactor];
@@ -413,7 +408,7 @@ static void ogl_sdr_setBlendFunc(GfxShader ifptr, GfxBlendFactor srcFactor, GfxB
 		self->flags &= ~oglShaderBlend;
 }
 
-static void ogl_sdr_bindImage(GfxShader ifptr, unsigned int param, GfxImage image)
+void ogl_sdr_bindImage(GfxShader ifptr, unsigned int param, GfxImage image)
 {
 	OGLShaderImpl* self = GfxShaderToImpl(ifptr);
 	if (param < oglShaderMaxImages) {
@@ -422,14 +417,14 @@ static void ogl_sdr_bindImage(GfxShader ifptr, unsigned int param, GfxImage imag
 	}
 }
 
-static GfxShader_i ogl_shader_i = {
+GfxShader_i ogl_shader_i = {
 	offsetof(OGLShaderImpl, refs) - offsetof(OGLShaderImpl, shader_i),
 	ogl_sdr_destruct,
 	ogl_sdr_setBlendFunc,
 	ogl_sdr_bindImage,
 };
 
-static OGLShaderImpl* ogl_shader_new()
+OGLShaderImpl* ogl_shader_new()
 {
 	OGLShaderImpl* self = cpart_new(OGLShaderImpl);
 	self->shader_i = &ogl_shader_i;
@@ -463,7 +458,7 @@ void ogl_r_select(GfxRender ifptr, GfxImage image)
 	}
 }
 
-static void ogl_r_selectNone(GfxRender ifptr)
+void ogl_r_selectNone(GfxRender ifptr)
 {
 	OGLRenderImpl* self = GfxRenderToImpl(ifptr);
 	if (self->selectedImg != 0) {
@@ -472,7 +467,7 @@ static void ogl_r_selectNone(GfxRender ifptr)
 	}
 }
 
-static void ogl_r_quads2d(GfxRender ifptr, int num, const float* verts, const float* coords)
+void ogl_r_quads2d(GfxRender ifptr, int num, const float* verts, const float* coords)
 {
 	OGLRenderImpl* self = GfxRenderToImpl(ifptr);
 	// avoid unnecessary enable calls.
@@ -501,13 +496,13 @@ static void ogl_r_quads2d(GfxRender ifptr, int num, const float* verts, const fl
 	glDrawArrays(GL_QUADS, 0, 4*num);
 }
 
-static void ogl_r_vertexCol(GfxRender ifptr, float red, float green, float blue, float alpha)
+void ogl_r_vertexCol(GfxRender ifptr, float red, float green, float blue, float alpha)
 {
 	//OGLRenderImpl* self = GfxRenderToImpl(ifptr);
 	glColor4f(red, green, blue, alpha);
 }
 
-static void ogl_r_blendFunc(GfxRender ifptr, GfxBlendFactor src, GfxBlendFactor dst)
+void ogl_r_blendFunc(GfxRender ifptr, GfxBlendFactor src, GfxBlendFactor dst)
 {
 	//OGLRenderImpl* self = GfxRenderToImpl(ifptr);
 	if (src == gfxOne && dst == gfxZero) {
@@ -518,7 +513,7 @@ static void ogl_r_blendFunc(GfxRender ifptr, GfxBlendFactor src, GfxBlendFactor 
 	}
 }
 
-static void ogl_r_transform2d(GfxRender ifptr, const Affine2D* t)
+void ogl_r_transform2d(GfxRender ifptr, const Affine2D* t)
 {
 	// NB. base vectors are contiguous in OpenGL.
 	float mat[16] = {
@@ -530,44 +525,44 @@ static void ogl_r_transform2d(GfxRender ifptr, const Affine2D* t)
 	glLoadMatrixf(mat);
 }
 
-static void ogl_r_clearTransform(GfxRender ifptr)
+void ogl_r_clearTransform(GfxRender ifptr)
 {
 	glLoadIdentity();
 }
 
-static void ogl_r_clear(GfxRender ifptr, const GfxCol* col)
+void ogl_r_clear(GfxRender ifptr, const GfxCol* col)
 {
 	//OGLRenderImpl* self = GfxRenderToImpl(ifptr);
 	glClearColor(col->r, col->g, col->b, col->a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
-static void ogl_r_setShader(GfxRender ifptr, GfxShader shader)
+void ogl_r_setShader(GfxRender ifptr, GfxShader shader)
 {
 	OGLShaderImpl* sh = GfxShaderToImpl(shader);
 }
 
-static void ogl_r_drawQuadsPtr(GfxRender ifptr, int numQuads, int vertexFormat, const void* vertexData)
+void ogl_r_drawQuadsPtr(GfxRender ifptr, int numQuads, int vertexFormat, const void* vertexData)
 {
 }
 
-static void ogl_r_drawQuadsIndPtr(GfxRender ifptr, int numQuads, int vertexFormat, const void* vertexData, int indexFormat, const void* indexData)
+void ogl_r_drawQuadsIndPtr(GfxRender ifptr, int numQuads, int vertexFormat, const void* vertexData, int indexFormat, const void* indexData)
 {
 }
 
-static void ogl_r_drawTrisIndPtr(GfxRender ifptr, int numTris, int vertexFormat, const void* vertexData, int indexFormat, const void* indexData)
+void ogl_r_drawTrisIndPtr(GfxRender ifptr, int numTris, int vertexFormat, const void* vertexData, int indexFormat, const void* indexData)
 {
 }
 
-static void ogl_r_drawStripIndPtr(GfxRender ifptr, int numTris, int vertexFormat, const void* vertexData, int indexFormat, const void* indexData)
+void ogl_r_drawStripIndPtr(GfxRender ifptr, int numTris, int vertexFormat, const void* vertexData, int indexFormat, const void* indexData)
 {
 }
 
-static void ogl_r_copyToImage(GfxRender ifptr, const iRect* srcRect, GfxImage destImage, const iRect* destRect)
+void ogl_r_copyToImage(GfxRender ifptr, const iRect* srcRect, GfxImage destImage, const iRect* destRect)
 {
 }
 
-static void ogl_r_setRenderTarget(GfxRender ifptr, GfxImage target)
+void ogl_r_setRenderTarget(GfxRender ifptr, GfxImage target)
 {
 	OGLRenderImpl* self = GfxRenderToImpl(ifptr);
 
@@ -628,7 +623,7 @@ static void ogl_r_setRenderTarget(GfxRender ifptr, GfxImage target)
 	// NB. volatile images reserve framebuffer memory permanently.
 }
 
-static GfxRender_i ogl_render_i = {
+GfxRender_i ogl_render_i = {
 	ogl_r_select,
 	ogl_r_selectNone,
 	ogl_r_quads2d,
@@ -662,7 +657,7 @@ void gfx_ogl_render_init(OGLRenderImpl* self, OGLContextImpl* cx)
 
 // GfxContext implementation.
 
-static GfxImage ogl_ctx_createImage(GfxContext ifptr)
+GfxImage ogl_ctx_createImage(GfxContext ifptr)
 {
 	OGLContextImpl* self = GfxContextToImpl(ifptr);
 	OGLImageImpl* tex = ogl_img_new();
@@ -670,7 +665,7 @@ static GfxImage ogl_ctx_createImage(GfxContext ifptr)
 	return &tex->image_i;
 }
 
-static GfxTarget ogl_ctx_createTarget(GfxContext ifptr, GfxImageFormat format,
+GfxTarget ogl_ctx_createTarget(GfxContext ifptr, GfxImageFormat format,
 	unsigned int width, unsigned int height, unsigned int samples,
 	GfxTargetFlags flags)
 {
@@ -683,7 +678,7 @@ static GfxTarget ogl_ctx_createTarget(GfxContext ifptr, GfxImageFormat format,
 	return 0;
 }
 
-static GfxShader ogl_ctx_createShader(GfxContext ifptr)
+GfxShader ogl_ctx_createShader(GfxContext ifptr)
 {
 	OGLContextImpl* self = GfxContextToImpl(ifptr);
 	OGLShaderImpl* shader = ogl_shader_new();
@@ -691,20 +686,20 @@ static GfxShader ogl_ctx_createShader(GfxContext ifptr)
 	return &shader->shader_i;
 }
 
-static GfxRender ogl_ctx_getRenderer(GfxContext ifptr)
+GfxRender ogl_ctx_getRenderer(GfxContext ifptr)
 {
 	OGLContextImpl* self = GfxContextToImpl(ifptr);
 	return &self->render.render_i;
 }
 
-static iPair ogl_ctx_getTargetSize(GfxContext ifptr)
+iPair ogl_ctx_getTargetSize(GfxContext ifptr)
 {
 	OGLContextImpl* self = GfxContextToImpl(ifptr);
 	iPair size = { self->render.width, self->render.height };
 	return size;
 }
 
-static GfxContext_i ogl_context_i = {
+GfxContext_i ogl_context_i = {
 	ogl_ctx_createImage,
 	ogl_ctx_createTarget,
 	ogl_ctx_createShader,
@@ -715,7 +710,7 @@ static GfxContext_i ogl_context_i = {
 
 // GfxBackend implementation.
 
-static void ogl_be_init(GfxBackend ifptr)
+void ogl_be_init(GfxBackend ifptr)
 {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	// initialise extensions.
@@ -729,7 +724,7 @@ static void ogl_be_init(GfxBackend ifptr)
 	}
 }
 
-static void ogl_be_final(GfxBackend ifptr) {
+void ogl_be_final(GfxBackend ifptr) {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	// finalise the scene.
 	if (self->scene)
@@ -739,7 +734,7 @@ static void ogl_be_final(GfxBackend ifptr) {
 	 while (walk) { ogl_img_release(walk); walk = walk->next; }}
 }
 
-static void ogl_be_sized(GfxBackend ifptr, int width, int height)
+void ogl_be_sized(GfxBackend ifptr, int width, int height)
 {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	// save the size of the system framebuffer.
@@ -755,7 +750,7 @@ static void ogl_be_sized(GfxBackend ifptr, int width, int height)
 		(*self->scene)->sized(self->scene, width, height);
 }
 
-static void ogl_be_render(GfxBackend ifptr)
+void ogl_be_render(GfxBackend ifptr)
 {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	// render the scene.
@@ -770,7 +765,7 @@ static void ogl_be_render(GfxBackend ifptr)
 	*/
 }
 
-static void ogl_be_update(GfxBackend ifptr, GfxDelta delta)
+void ogl_be_update(GfxBackend ifptr, GfxDelta delta)
 {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	// update the scene.
@@ -778,7 +773,7 @@ static void ogl_be_update(GfxBackend ifptr, GfxDelta delta)
 		(*self->scene)->update(self->scene, delta);
 }
 
-static void ogl_be_setScene(GfxBackend ifptr, GfxScene scene)
+void ogl_be_setScene(GfxBackend ifptr, GfxScene scene)
 {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	// finalise the previous scene.
@@ -794,13 +789,13 @@ static void ogl_be_setScene(GfxBackend ifptr, GfxScene scene)
 	}
 }
 
-static GfxContext ogl_be_getContext(GfxBackend ifptr)
+GfxContext ogl_be_getContext(GfxBackend ifptr)
 {
 	OGLContextImpl* self = GfxBackendToImpl(ifptr);
 	return &self->context_i;
 }
 
-static GfxBackend_i ogl_backend_i = {
+GfxBackend_i ogl_backend_i = {
 	ogl_be_init,
 	ogl_be_final,
 	ogl_be_sized,

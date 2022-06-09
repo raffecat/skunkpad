@@ -1,6 +1,3 @@
-#ifndef CPART_GL_VIEW
-#define CPART_GL_VIEW
-
 // GLView - child UI Window for OpenGL rendering.
 // Depends on: ui, glrender
 
