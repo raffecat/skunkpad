@@ -1,20 +1,15 @@
-#include "defs.h"
-#include "app.h"
-#include "skunkpad.h"
-#include "ui.h"
-#include "str.h"
-#include "res_load.h"
+import * from defs, app, skunkpad, ui, str, res_load
 
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
 
-static const stringref c_script = str_lit("skunkpad.lua");
+const stringref c_script = str_lit("skunkpad.lua");
 
-static lua_State* g_lua = 0;
+lua_State* g_lua = 0;
 
 
-static void message(const char *message, const char *title) {
+void message(const char *message, const char *title) {
 	if (!title) title = "Lua Error";
 	ui_report_error(title, message);
 }
@@ -22,7 +17,7 @@ static void message(const char *message, const char *title) {
 
 // ------------------------- from lbaselib.c -------------------------
 
-static int print (lua_State *L) {
+int print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i, num = 0;
   const char *s;
@@ -47,7 +42,7 @@ static int print (lua_State *L) {
 
 // ------------------------- from lua.c -------------------------
 
-static int report (lua_State *L, int status) {
+int report (lua_State *L, int status) {
   if (status && !lua_isnil(L, -1)) {
     const char *msg = lua_tostring(L, -1);
     if (msg == NULL) msg = "(error object is not a string)";
@@ -57,7 +52,7 @@ static int report (lua_State *L, int status) {
   return status;
 }
 
-static int traceback (lua_State *L) {
+int traceback (lua_State *L) {
   if (!lua_isstring(L, 1))  /* 'message' not a string? */
     return 1;  /* keep it intact */
   lua_getfield(L, LUA_GLOBALSINDEX, "debug");
@@ -76,7 +71,7 @@ static int traceback (lua_State *L) {
   return 1;
 }
 
-static int docall (lua_State *L, int narg, int clear) {
+int docall (lua_State *L, int narg, int clear) {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
   lua_pushcfunction(L, traceback);  /* push traceback function */
@@ -89,11 +84,11 @@ static int docall (lua_State *L, int narg, int clear) {
 
 // --------------------- tagged objects ---------------------
 
-static const char* c_frame_tag = "Frame";
-static const char* c_image_tag = "Image";
-static const char* c_timer_tag = "Timer";
+const char* c_frame_tag = "Frame";
+const char* c_image_tag = "Image";
+const char* c_timer_tag = "Timer";
 
-static void* get_tagged(lua_State *L, int idx, const char* tag) // [-0, +0]
+void* get_tagged(lua_State *L, int idx, const char* tag) // [-0, +0]
 {
 	void *check, *result = lua_touserdata(L, idx);
 	if (result) {
@@ -108,7 +103,7 @@ static void* get_tagged(lua_State *L, int idx, const char* tag) // [-0, +0]
 	return 0;
 }
 
-static void push_tagged(lua_State *L, void* obj, const char* tag) // [-0, +1]
+void push_tagged(lua_State *L, void* obj, const char* tag) // [-0, +1]
 {
 	lua_pushlightuserdata(L, obj);       // +1  userdata
 	lua_pushlightuserdata(L, (void*)tag);       // +1  type tag
@@ -116,38 +111,38 @@ static void push_tagged(lua_State *L, void* obj, const char* tag) // [-0, +1]
 	lua_pushlightuserdata(L, obj);       // +1  return value
 }
 
-static void unreg_tagged(lua_State *L, void* obj) // [-0, +0]
+void unreg_tagged(lua_State *L, void* obj) // [-0, +0]
 {
 	lua_pushlightuserdata(L, obj);       // +1  userdata
 	lua_pushnil(L);                      // +1  nil
 	lua_rawset(L, LUA_REGISTRYINDEX);    // -2
 }
 
-static Frame* opt_frame(lua_State *L, int idx, Frame* def) {
+Frame* opt_frame(lua_State *L, int idx, Frame* def) {
 	if (lua_isnoneornil(L, idx)) return def;
 	return get_tagged(L, idx, c_frame_tag);
 }
 
-static Frame* check_frame(lua_State *L, int idx) {
+Frame* check_frame(lua_State *L, int idx) {
 	return get_tagged(L, idx, c_frame_tag);
 }
 
-static GfxImage opt_image(lua_State *L, int idx, GfxImage def) {
+GfxImage opt_image(lua_State *L, int idx, GfxImage def) {
 	if (lua_isnoneornil(L, idx)) return def;
 	return get_tagged(L, idx, c_image_tag);
 }
 
-static GfxImage check_image(lua_State *L, int idx) {
+GfxImage check_image(lua_State *L, int idx) {
 	return get_tagged(L, idx, c_image_tag);
 }
 
 
 // ------------------------- bindings -------------------------
 
-static int lb_exit_app(lua_State *L) { app_exit(); return 0; }
-static int lb_close_doc(lua_State *L) { close_doc(); return 0; }
+int lb_exit_app(lua_State *L) { app_exit(); return 0; }
+int lb_close_doc(lua_State *L) { close_doc(); return 0; }
 
-static int lb_new_doc(lua_State *L)
+int lb_new_doc(lua_State *L)
 {
 	int width = luaL_checkint(L, 1);
 	int height = luaL_checkint(L, 2);
@@ -155,21 +150,21 @@ static int lb_new_doc(lua_State *L)
 	return 0;
 }
 
-static int lb_new_layer(lua_State *L)
+int lb_new_layer(lua_State *L)
 {
 	int above = luaL_optint(L, 1, INT_MAX);
 	new_layer(above);
 	return 0;
 }
 
-static int lb_delete_layer(lua_State *L)
+int lb_delete_layer(lua_State *L)
 {
 	int index = luaL_checkint(L, 1);
 	delete_layer(index);
 	return 0;
 }
 
-static int lb_load_into_layer(lua_State *L)
+int lb_load_into_layer(lua_State *L)
 {
 	size_t len;
 	int index = luaL_checkint(L, 1);
@@ -179,7 +174,7 @@ static int lb_load_into_layer(lua_State *L)
 	return 0;
 }
 
-static int lb_create_frame(lua_State *L)
+int lb_create_frame(lua_State *L)
 {
 	Frame* parent = opt_frame(L, 1, g_root_frame);
 	int after = luaL_optint(L, 2, -1);
@@ -188,7 +183,7 @@ static int lb_create_frame(lua_State *L)
 	return 1;
 }
 
-static int lb_destroy_frame(lua_State *L)
+int lb_destroy_frame(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	invalidate_frame(frame);
@@ -196,7 +191,7 @@ static int lb_destroy_frame(lua_State *L)
 	return 0;
 }
 
-static int lb_insert_frame(lua_State *L)
+int lb_insert_frame(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	int after = luaL_optint(L, 2, -1);
@@ -207,7 +202,7 @@ static int lb_insert_frame(lua_State *L)
 	return 0;
 }
 
-static int lb_set_frame_rect(lua_State *L)
+int lb_set_frame_rect(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	fRect rect;
@@ -221,7 +216,7 @@ static int lb_set_frame_rect(lua_State *L)
 	return 0;
 }
 
-static int lb_set_frame_col(lua_State *L)
+int lb_set_frame_col(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	float red   = (float)luaL_checknumber(L, 2);
@@ -233,7 +228,7 @@ static int lb_set_frame_col(lua_State *L)
 	return 0;
 }
 
-static int lb_set_frame_alpha(lua_State *L)
+int lb_set_frame_alpha(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	float alpha = (float)luaL_checknumber(L, 2);
@@ -242,7 +237,7 @@ static int lb_set_frame_alpha(lua_State *L)
 	return 0;
 }
 
-static int lb_set_frame_image(lua_State *L)
+int lb_set_frame_image(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	GfxImage image = opt_image(L, 2, 0);
@@ -251,7 +246,7 @@ static int lb_set_frame_image(lua_State *L)
 	return 0;
 }
 
-static int lb_show_frame(lua_State *L)
+int lb_show_frame(lua_State *L)
 {
 	Frame* frame = check_frame(L, 1);
 	bool show = lua_toboolean(L, 2) ? true : false;
@@ -260,7 +255,7 @@ static int lb_show_frame(lua_State *L)
 	return 0;
 }
 
-static int lb_load_resource(lua_State *L)
+int lb_load_resource(lua_State *L)
 {
 	GfxImage image; size_t len;
 	const char* path = luaL_checklstring(L, 1, &len);
@@ -273,7 +268,7 @@ static int lb_load_resource(lua_State *L)
 	return 1;
 }
 
-static int lb_get_image_info(lua_State *L)
+int lb_get_image_info(lua_State *L)
 {
 	GfxImage image = check_image(L, 1);
 	iPair size = (*image)->getSize(image);
@@ -282,7 +277,7 @@ static int lb_get_image_info(lua_State *L)
 	return 2;
 }
 
-static int lb_get_layer_info(lua_State *L)
+int lb_get_layer_info(lua_State *L)
 {
 	int index = luaL_checkint(L, 1);
 	Frame* layer = get_layer(index);
@@ -301,7 +296,7 @@ static int lb_get_layer_info(lua_State *L)
 	return 0;
 }
 
-static int lb_show_layer(lua_State *L)
+int lb_show_layer(lua_State *L)
 {
 	int index = luaL_checkint(L, 1);
 	Frame* layer = get_layer(index);
@@ -313,13 +308,13 @@ static int lb_show_layer(lua_State *L)
 	return 0;
 }
 
-static int lb_set_brush(lua_State *L)
+int lb_set_brush(lua_State *L)
 {
-	static const char* modeNames[] = {
+	const char* modeNames[] = {
 		"normal",
 		"subtract",
 	0};
-	static BlendMode modes[] = {
+	BlendMode modes[] = {
 		blendNormal,
 		blendSubtract,
 	};
@@ -339,13 +334,13 @@ static int lb_set_brush(lua_State *L)
 	return 0;
 }
 
-static int lb_begin_painting(lua_State *L)
+int lb_begin_painting(lua_State *L)
 {
 	begin_painting();
 	return 0;
 }
 
-static int lb_active_layer(lua_State *L)
+int lb_active_layer(lua_State *L)
 {
 	int index = luaL_optint(L, 1, 0);
 	active_layer(index);
@@ -353,14 +348,14 @@ static int lb_active_layer(lua_State *L)
 }
 
 extern UndoBuffer* undoBuf; // TODO: fix this hack.
-static int lb_undo(lua_State *L) { undo(undoBuf); return 0; }
-static int lb_redo(lua_State *L) { redo(undoBuf); return 0; }
+int lb_undo(lua_State *L) { undo(undoBuf); return 0; }
+int lb_redo(lua_State *L) { redo(undoBuf); return 0; }
 
-static int lb_zoomIn(lua_State *L) { zoom(1); return 0; }
-static int lb_zoomOut(lua_State *L) { zoom(-1); return 0; }
-static int lb_zoomHome(lua_State *L) { resetZoom(); return 0; }
+int lb_zoomIn(lua_State *L) { zoom(1); return 0; }
+int lb_zoomOut(lua_State *L) { zoom(-1); return 0; }
+int lb_zoomHome(lua_State *L) { resetZoom(); return 0; }
 
-static int lb_startTimer(lua_State *L)
+int lb_startTimer(lua_State *L)
 {
 	long delay    = (long)(1000 * luaL_checknumber(L, 1));
 	long interval = (long)(1000 * luaL_optnumber(L, 2, 0));
@@ -370,7 +365,7 @@ static int lb_startTimer(lua_State *L)
 	return 1;
 }
 
-static int lb_stopTimer(lua_State *L)
+int lb_stopTimer(lua_State *L)
 {
 	void* timer = get_tagged(L, 1, c_timer_tag);
 	stop_timer(timer);
@@ -378,7 +373,7 @@ static int lb_stopTimer(lua_State *L)
 	return 0;
 }
 
-static const luaL_Reg api_funcs[] = {
+const luaL_Reg api_funcs[] = {
   {"exit_app", lb_exit_app},
   {"close_doc", lb_close_doc},
   {"new_doc", lb_new_doc},
@@ -410,7 +405,7 @@ static const luaL_Reg api_funcs[] = {
   {NULL, NULL}
 };
 
-static int setup_lua(lua_State *L)
+export int setup_lua(lua_State *L)
 {
 	dataBuf buf;
 
@@ -437,7 +432,7 @@ static int setup_lua(lua_State *L)
 	return 0;
 }
 
-void init_bindings()
+export void init_bindings()
 {
 	g_lua = luaL_newstate();
 	if (g_lua) {
@@ -447,13 +442,13 @@ void init_bindings()
 	}
 }
 
-void term_bindings()
+export void term_bindings()
 {
 	lua_close(g_lua);
 	g_lua = 0;
 }
 
-void notify_resize(int w, int h)
+export void notify_resize(int w, int h)
 {
 	lua_State *L = g_lua;
 	if (L) {
@@ -464,7 +459,7 @@ void notify_resize(int w, int h)
 	}
 }
 
-void notify_pointer(int x, int y, int buttons)
+export void notify_pointer(int x, int y, int buttons)
 {
 	lua_State *L = g_lua;
 	if (L) {
@@ -476,7 +471,7 @@ void notify_pointer(int x, int y, int buttons)
 	}
 }
 
-void notify_key(int key, int down)
+export void notify_key(int key, int down)
 {
 	lua_State *L = g_lua;
 	if (L) {
@@ -487,7 +482,7 @@ void notify_key(int key, int down)
 	}
 }
 
-void notify_timer(void* timer)
+export void notify_timer(void* timer)
 {
 	lua_State *L = g_lua;
 	if (L) {
@@ -497,12 +492,12 @@ void notify_timer(void* timer)
 	}
 }
 
-void unreg_frame(Frame* frame)
+export void unreg_frame(Frame* frame)
 {
 	unreg_tagged(g_lua, frame);
 }
 
-void unreg_timer(void* timer)
+export void unreg_timer(void* timer)
 {
 	unreg_tagged(g_lua, timer);
 }

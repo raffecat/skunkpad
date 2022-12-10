@@ -15,7 +15,7 @@ struct FrameRenderRequest {
 };
 
 struct FrameHitTest {
-	ref Frame frame;
+	Frame frame;
 	fPair pos;
 };
 
@@ -50,13 +50,13 @@ export enum FrameMessage {
 	frameBlendImage, // FrameBlendImage*
 } FrameMessage;
 
-let FrameMessageFunc = type (ref Frame, FrameMessage, ref any) -> int;
+let FrameMessageFunc = type (Frame, FrameMessage, ref any) -> int;
 
 struct Frame {
 	FrameMessageFunc message;
-	ref Frame parent;
-	ref Frame children;
-	ref Frame next;
+	Frame parent;
+	Frame children;
+	Frame next;
 };
 
 export const RGBA c_transparent = { 0, 0, 0, 0 };
@@ -64,22 +64,22 @@ export const RGBA c_transparent = { 0, 0, 0, 0 };
 
 // frame helpers.
 
-ref Frame frame_alloc(size_t size, FrameMessageFunc func)
+Frame frame_alloc(size_t size, FrameMessageFunc func)
 {
-	ref Frame frame = cpart_alloc(size);
+	Frame frame = cpart_alloc(size);
 	frame.message = func;
 	frame.parent = frame.children = frame.next = 0;
 	return frame;
 }
 
-export void frame_remove_from_parent_no_notify(ref Frame frame)
+void frame_remove_from_parent_no_notify(Frame frame)
 {
-	ref Frame parent = frame.parent;
+	Frame parent = frame.parent;
 	if (parent && parent.children) {
 		if (parent.children == frame) {
 			parent.children = frame.next;
 		} else {
-			ref Frame prev = parent.children; // cannot be "frame"
+			Frame prev = parent.children; // cannot be "frame"
 			while (prev.next && prev.next != frame) prev = prev.next;
 			// prev cannot be frame, next is frame or 0.
 			if (prev.next == frame)
@@ -90,18 +90,18 @@ export void frame_remove_from_parent_no_notify(ref Frame frame)
 	frame.next = 0;
 }
 
-void frame_send_to_children(ref Frame frame, FrameMessage msg, void* data)
+void frame_send_to_children(Frame frame, FrameMessage msg, void* data)
 {
-	ref Frame walk = frame.children;
+	Frame walk = frame.children;
 	while (walk) {
 		walk.message(walk, msg, data);
 		walk = walk.next;
 	}
 }
 
-int frame_send_to_ancestors(ref Frame frame, FrameMessage msg, void* data)
+int frame_send_to_ancestors(Frame frame, FrameMessage msg, void* data)
 {
-	ref Frame walk = frame.parent;
+	Frame walk = frame.parent;
 	while (walk) {
 		if (walk.message(walk, msg, data))
 			return 1; // ancestor handled the message.
@@ -113,7 +113,7 @@ int frame_send_to_ancestors(ref Frame frame, FrameMessage msg, void* data)
 
 // direct api.
 
-export void frame_remove(ref Frame frame)
+export void frame_remove(Frame frame)
 {
 	if (frame.parent) {
 		frame_remove_from_parent_no_notify(frame);
@@ -122,9 +122,9 @@ export void frame_remove(ref Frame frame)
 	}
 }
 
-export void frame_insert(ref Frame frame, ref Frame parent, int after)
+export void frame_insert(Frame frame, Frame parent, int after)
 {
-	ref Frame old_parent = frame.parent;
+	Frame old_parent = frame.parent;
 	if (old_parent)
 		frame_remove_from_parent_no_notify(frame);
 	if (!parent) parent = old_parent; // re-insert into same parent.
@@ -138,7 +138,7 @@ export void frame_insert(ref Frame frame, ref Frame parent, int after)
 		else {
 			// insert after N child frames, append if N<0.
 			if (parent.children) {
-				ref Frame prev = parent.children;
+				Frame prev = parent.children;
 				if (after < 0) after = INT_MAX;
 				while (prev.next && --after) prev = prev.next;
 				// insert into linked list.
@@ -152,7 +152,7 @@ export void frame_insert(ref Frame frame, ref Frame parent, int after)
 		frame.message(frame, frameParentChanged, 0);
 }
 
-export void frame_destroy(ref Frame frame)
+export void frame_destroy(Frame frame)
 {
 	// recursively destroy children first.
 	while (frame.children) {
@@ -164,9 +164,9 @@ export void frame_destroy(ref Frame frame)
 	cpart_free(frame);
 }
 
-export ref Frame frame_child(ref Frame frame, int index)
+export Frame frame_child(Frame frame, int index)
 {
-	ref Frame walk = frame.children;
+	Frame walk = frame.children;
 	while (walk && index) { walk = walk.next; --index; }
 	return walk;
 }
@@ -183,7 +183,7 @@ struct BoxFrame {
 	bool show;
 };
 
-void box_draw(Boxref Frame f, FrameRenderRequest* r)
+void box_draw(BoxFrame f, FrameRenderRequest* r)
 {
 	FrameRenderRequest req;
 	req.draw = r.draw;
@@ -223,15 +223,17 @@ void box_draw(Boxref Frame f, FrameRenderRequest* r)
 	}
 }
 
-/*bool box_clip_test(Boxref Frame frame, fRect* bounds)
+/*bool box_clip_test(BoxFrame frame, fRect* bounds)
 {
 	return bounds.left <= frame.rect.right && bounds.top <= frame.rect.bottom &&
 		   bounds.right >= frame.rect.left && bounds.bottom >= frame.rect.top;
 }*/
 
-int box_message(ref Frame frame, FrameMessage msg, void* data)
+int box_message(Frame frame, FrameMessage msg, void* data)
 {
-	Boxref Frame box = (Boxref Frame)frame;
+	// a message handler is the same as an interface with optional methods;
+	// an interface could be compiled down to a message handler (or function table)
+	BoxFrame box = (BoxFrame)frame;
 	switch (msg)
 	{
 	case frameRender:
@@ -270,16 +272,16 @@ int box_message(ref Frame frame, FrameMessage msg, void* data)
 	return 0;
 }
 
-export ref Frame frame_create_box(ref Frame parent)
+export Frame frame_create_box(Frame parent)
 {
-	Boxref Frame frame = frame_alloc(sizeof(BoxFrame), box_message);
+	BoxFrame frame = frame_alloc(sizeof(BoxFrame), box_message);
 	frame.rect.left = frame.rect.top = frame.rect.right = frame.rect.bottom = 0;
 	frame.image = 0;
 	frame.col = c_transparent;
 	frame.alpha = 1;
 	frame.show = true;
-	frame_insert((ref Frame)frame, parent, -1); // append.
-	return (ref Frame)frame;
+	frame_insert((Frame)frame, parent, -1); // append.
+	return (Frame)frame;
 }
 
 
@@ -299,7 +301,7 @@ struct LayerFrame {
 
 const int c_tileSize = 256;
 
-bool any_visible(ref Frame f)
+bool any_visible(Frame f)
 {
 	// is this frame or any subsequent sibling visible?
 	while (f) {
@@ -333,7 +335,7 @@ __inline float max04(float a, float b, float c)
 // to avoid selecting (and therefore swapping in) the textures
 // for tiles that will be clipped to the viewport anyway.
 
-void lf_draw_tiles(Layerref Frame f, FrameRenderRequest* r)
+void lf_draw_tiles(LayerFrame f, FrameRenderRequest* r)
 {
 	GfxDraw draw = r.draw;
 	GfxImage* grid = f.grid;
@@ -358,7 +360,7 @@ void lf_draw_tiles(Layerref Frame f, FrameRenderRequest* r)
 	}
 }
 
-void lf_draw(Layerref Frame f, FrameRenderRequest* r)
+void lf_draw(LayerFrame f, FrameRenderRequest* r)
 {
 	// blend to intermediate target if layer has children.
 	if (f.frame.children && any_visible(f.frame.children))
@@ -389,7 +391,7 @@ void lf_draw(Layerref Frame f, FrameRenderRequest* r)
 	}
 }
 
-void lf_discard(Layerref Frame f)
+void lf_discard(LayerFrame f)
 {
 	if (f.grid) {
 		int oldX = (f.width + (c_tileSize-1)) / c_tileSize;
@@ -416,7 +418,7 @@ int ceilPowerOfTwo(int value) {
 	return 0;
 }
 
-GfxImage lf_createTile(Layerref Frame f, int width, int height)
+GfxImage lf_createTile(LayerFrame f, int width, int height)
 {
 	GfxImage img = GfxContext_createImage(f.rc);
 	RGBA transparent = { 0, 0, 0, 0 };
@@ -425,7 +427,7 @@ GfxImage lf_createTile(Layerref Frame f, int width, int height)
 	return img;
 }
 
-void lf_resize(Layerref Frame f, int width, int height)
+void lf_resize(LayerFrame f, int width, int height)
 {
 	int tilesX, tilesY, ix, iy;
 	lf_discard(f); // destroy old grid of tiles.
@@ -474,7 +476,7 @@ void lf_resize(Layerref Frame f, int width, int height)
 
 let MIN(a,b) = a < b ? a : b;
 
-void lf_load_surface(Layerref Frame f, SurfaceData* sd)
+void lf_load_surface(LayerFrame f, SurfaceData* sd)
 {
 	int copyX, copyY, tilesX, ix, iy;
 	copyX = (sd.width + (c_tileSize-1)) / c_tileSize;
@@ -536,7 +538,7 @@ void f_blend_image(GfxImage dest, const iRect* destRect,
 }
 
 // blend source image over all overlapping tiles.
-void lf_blend_image(Layerref Frame f, const FrameBlendImage* b)
+void lf_blend_image(LayerFrame f, const FrameBlendImage* b)
 {
 	// determine which tiles overlap the destination rect (round out)
 	int left = b.dest.left / c_tileSize;
@@ -563,9 +565,9 @@ void lf_blend_image(Layerref Frame f, const FrameBlendImage* b)
 	}
 }
 
-int lf_message(ref Frame frame, FrameMessage msg, void* data)
+int lf_message(Frame frame, FrameMessage msg, void* data)
 {
-	Layerref Frame f = (Layerref Frame)frame;
+	LayerFrame f = (LayerFrame)frame;
 	switch (msg)
 	{
 	case frameRender:
@@ -606,9 +608,9 @@ int lf_message(ref Frame frame, FrameMessage msg, void* data)
 	return 0;
 }
 
-export ref Frame frame_create_layer(ref Frame parent)
+export Frame frame_create_layer(Frame parent)
 {
-	Layerref Frame frame = frame_alloc(sizeof(LayerFrame), lf_message);
+	LayerFrame frame = frame_alloc(sizeof(LayerFrame), lf_message);
 	frame.grid = 0;
 	frame.rc = 0; // TODO: hmm.
 	frame.mode = gfxBlendPremultiplied;
@@ -617,8 +619,8 @@ export ref Frame frame_create_layer(ref Frame parent)
 	frame.width = frame.height = 0;
 	frame.tilesX = frame.tilesY = 0;
 	frame.show = true;
-	frame_insert((ref Frame)frame, parent, -1); // append.
-	return (ref Frame)frame;
+	frame_insert((Frame)frame, parent, -1); // append.
+	return (Frame)frame;
 }
 
 
@@ -633,7 +635,7 @@ struct CanvasFrame {
 	bool show;
 };
 
-void canvas_draw(Canvasref Frame f, FrameRenderRequest* r)
+void canvas_draw(CanvasFrame f, FrameRenderRequest* r)
 {
 	GfxDraw draw = r.draw;
 
@@ -656,9 +658,9 @@ void canvas_draw(Canvasref Frame f, FrameRenderRequest* r)
 	GfxDraw_restore(draw);
 }
 
-int canvas_message(ref Frame frame, FrameMessage msg, void* data)
+int canvas_message(Frame frame, FrameMessage msg, void* data)
 {
-	Canvasref Frame f = (Canvasref Frame)frame;
+	CanvasFrame f = (CanvasFrame)frame;
 	switch (msg)
 	{
 	case frameRender:
@@ -688,16 +690,16 @@ int canvas_message(ref Frame frame, FrameMessage msg, void* data)
 	return 0;
 }
 
-export ref Frame frame_create_canvas(ref Frame parent)
+export Frame frame_create_canvas(Frame parent)
 {
-	Canvasref Frame frame = frame_alloc(sizeof(CanvasFrame), canvas_message);
+	CanvasFrame frame = frame_alloc(sizeof(CanvasFrame), canvas_message);
 	affine_set_identity(&frame.transform);
 	frame.width = frame.height = 0;
 	frame.col = rgba_white;
 	//frame.bgcol = rgba_grey;
 	frame.show = true;
-	frame_insert((ref Frame)frame, parent, -1); // append.
-	return (ref Frame)frame;
+	frame_insert((Frame)frame, parent, -1); // append.
+	return (Frame)frame;
 }
 
 
@@ -709,9 +711,9 @@ struct UIFrame {
 	bool own;
 };
 
-int ui_message(ref Frame frame, FrameMessage msg, void* data)
+int ui_message(Frame frame, FrameMessage msg, void* data)
 {
-	UIref Frame uiframe = (UIref Frame)frame;
+	UIFrame uiframe = (UIFrame)frame;
 	switch (msg)
 	{
 	case frameSetRect:
@@ -745,28 +747,28 @@ int ui_message(ref Frame frame, FrameMessage msg, void* data)
 	return 0;
 }
 
-export ref Frame frame_create_ui_parent(UI_Window* window, bool own)
+export Frame frame_create_ui_parent(UI_Window* window, bool own)
 {
-	UIref Frame frame = frame_alloc(sizeof(UIFrame), ui_message);
+	UIFrame frame = frame_alloc(sizeof(UIFrame), ui_message);
 	frame.window = window;
 	frame.own = own; // destroy window when frame destroyed?
-	return (ref Frame)frame;
+	return (Frame)frame;
 }
 
-export ref Frame frame_create_panel(ref Frame parent)
+export Frame frame_create_panel(Frame parent)
 {
-	UIref Frame frame = frame_alloc(sizeof(UIFrame), ui_message);
+	UIFrame frame = frame_alloc(sizeof(UIFrame), ui_message);
 	frame.window = 0;
 	frame.own = true; // destroy window when frame destroyed.
-	return (ref Frame)frame;
+	return (Frame)frame;
 }
 
-export ref Frame frame_create_button(ref Frame parent)
+export Frame frame_create_button(Frame parent)
 {
-	UIref Frame frame = frame_alloc(sizeof(UIFrame), ui_message);
+	UIFrame frame = frame_alloc(sizeof(UIFrame), ui_message);
 	frame.window = 0;
 	frame.own = true; // destroy window when frame destroyed.
-	return (ref Frame)frame;
+	return (Frame)frame;
 }
 
 
@@ -814,7 +816,7 @@ struct AffineRect {
 struct CanvasSource {
 	SpanSource source;
 	AffineRect shape;
-	ref Frame frame;
+	Frame frame;
 	RGBA border, paper;
 	SpanBuffer buffer;
 };

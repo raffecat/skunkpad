@@ -1,5 +1,5 @@
-#include "defs.h"
-#include "ui_win_impl.h"
+import * from defs
+import * from ui_win_impl
 
 typedef unsigned long (*app_run_func)(void* data);
 

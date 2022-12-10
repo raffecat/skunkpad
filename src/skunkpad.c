@@ -1,98 +1,9 @@
-#include "defs.h"
-#include "app.h"
-#include "ui.h"
-#include "frames.h"
-#include "surface.h"
-#include "tablet_input.h"
-#include "lib_png.h"
-#include "lib_jpeg.h"
-#include "blend.h"
-#include "res_load.h"
-#include "pagebuf.h"
-#include "skunkpad.h"
-#include "shapes.h"
-#include "timer.h"
-#include "glview.h"
-#include "draw.h"
-#include "pancontrol.h"
+import * from defs, app, ui, frames, surface, tablet_input
+import * from lib_png, lib_jpeg, blend, res_load, pagebuf
+import * from str, shapes, timer, glview, draw, pancontrol
 
-#include <math.h>
-#include <limits.h>
-
-#include "str.h"
-#include "surface.h"
-#include "frames.h"
-
-// api for lua bindings.
-string browse_file_open(stringref caption, stringref path);
-string browse_file_save(stringref caption, stringref path);
-void new_doc(int width, int height);
-void open_doc(stringref path);
-void save_doc(stringref path);
-void close_doc();
-void new_layer(int above);
-void delete_layer(int index);
-void show_layer(int index, bool show);
-void load_into_layer(int index, stringref path);
-void active_layer(int index); // for painting.
-void set_brush_mode(BlendMode mode);
-void set_brush_size(int sizeMin, int sizeMax, int spacing);
-void set_brush_alpha(int alphaMin, int alphaMax);
-void set_brush_col(RGBA col);
-void begin_painting();
-void invalidate_all();
-void zoom(int steps);
-void resetZoom();
-
-// timers
-void* start_timer(unsigned long delay, unsigned long interval);
-void stop_timer(void* timer);
-
-
-// overlay frames.
-
-Frame* create_frame(Frame* parent, int after);
-void destroy_frame(Frame* frame);
-void insert_frame(Frame* frame, Frame* parent, int after);
-void set_frame_col(Frame* frame, float red, float green, float blue, float alpha);
-void set_frame_alpha(Frame* frame, float alpha);
-void set_frame_image(Frame* frame, GfxImage image);
-void invalidate_frame(Frame* frame);
-GfxImage load_image(stringref path);
-Frame* get_layer(int index);
-
-extern Frame* g_root_frame;
-
-
-/*
-void move_frame(Frame* frame, float left, float top, float right, float bottom);
-void set_frame_colour(Frame* frame, float r, float g, float b, float a);
-void set_frame_image(Frame* frame, Image* image);
-void set_frame_coords(Frame* frame, float left, float top, float right, float bottom);
-void set_frame_border(int frame, float thickness, float dash, float r, float g, float b, float a);
-void set_frame_shape(int frame, float radius); // non-zero for round rect.
-*/
-
-
-// undo
-
-typedef struct UndoBuffer UndoBuffer;
-typedef void (*UndoBufferApply)(void* obj, void* data, int size);
-UndoBuffer* undobuf_create(size_t size);
-void undobuf_resize(UndoBuffer* ub, size_t size);
-void undobuf_begin(UndoBuffer* ub, void* data, int size); // begin a packet.
-void undobuf_append(UndoBuffer* ub, void* data, int size); // append to packet.
-void undobuf_end(UndoBuffer* ub); // end of current packet.
-void undobuf_undo(UndoBuffer* ub, UndoBufferApply func, void* obj);
-void undobuf_redo(UndoBuffer* ub, UndoBufferApply func, void* obj);
-
-void undo(UndoBuffer* ub);
-void redo(UndoBuffer* ub);
-
-// app stuff that undo uses...
-extern Frame* activeLayer;
-void update_brush();
-
+import * from <math.h>
+import * from <limits.h>
 
 // brush engine.
 struct Tablet_InputEvent;
@@ -121,23 +32,7 @@ void painter_set_output(DabPainter* dp, DabPainterOutput func, void* obj);
 //GfxImage painter_get_accum(DabPainter* dp);
 //RGBA painter_get_col(DabPainter* dp);
 
-
-// bindings
-void init_bindings();
-void term_bindings();
-void notify_resize(int w, int h);
-void notify_pointer(int x, int y, int buttons);
-void notify_wheel(int x, int y, int delta);
-void notify_scroll(int x, int y);
-void notify_key(int key, int down);
-void notify_timer(void* timer);
-void unreg_frame(Frame* frame);
-void unreg_timer(void* timer);
-
-
-// utils
-RGBA make_rgba(float r, float g, float b, float a);
-
+import bindings
 
 
 typedef struct ScaledView ScaledView;
@@ -320,13 +215,13 @@ static void adjustZoom(int delta, iPair pos)
     setZoom(zoom, pos);
 }
 
-void zoom(int steps) // Lua API
+export void zoom(int steps) // Lua API
 {
     iPair pos = ui_get_pointer_pos();
     adjustZoom(steps * 120, pos);
 }
 
-void resetZoom() // Lua API
+export void resetZoom() // Lua API
 {
     iPair pos = ui_get_pointer_pos();
     setZoom(100 * 120, pos);
@@ -404,7 +299,7 @@ static void view_handler(void* context, UI_Event* e) {
 			drawRect.right = ev->width;
 			drawRect.bottom = ev->height;
             if (g_root_frame) {
-                notify_resize(ev->width, ev->height);
+                bindings.notify_resize(ev->width, ev->height);
             }
             if (scrollView) { // must do this one last.
                 iPair origin = {0,0};
@@ -422,7 +317,7 @@ static void view_handler(void* context, UI_Event* e) {
             else {
                 // pass pointer event to ui handler.
                 UI_PointerEvent* ev = (UI_PointerEvent*)e;
-                notify_pointer(ev->pos.x, ev->pos.y, ev->buttons);
+                bindings.notify_pointer(ev->pos.x, ev->pos.y, ev->buttons);
                 // ui might have started drawing.
                 if (paintMode) {
                     // route pointer input through the tablet.
@@ -437,7 +332,7 @@ static void view_handler(void* context, UI_Event* e) {
         case ui_event_key: {
             UI_KeyEvent* ev = (UI_KeyEvent*)e;
 			if (!panKeyInput(ev))
-                notify_key(ev->key, ev->is_down);
+                bindings.notify_key(ev->key, ev->is_down);
             break; }
     }
 }
@@ -647,7 +542,7 @@ void final()
 
 // ------------------------- helpers -------------------------
 
-RGBA make_rgba(float r, float g, float b, float a)
+export RGBA make_rgba(float r, float g, float b, float a)
 {
     RGBA col;
     r=r*256.0f; g=g*256.0f; b=b*256.0f; a=a*256.0f;
@@ -658,7 +553,7 @@ RGBA make_rgba(float r, float g, float b, float a)
     return col;
 }
 
-Frame* get_layer(int index)
+export Frame* get_layer(int index)
 {
     if (document)
         return frame_child(document->layers, index - 1);
@@ -680,7 +575,7 @@ static void no_document()
 
 // ------------------------- API -------------------------
 
-void close_doc()
+export void close_doc()
 {
     iPair org = {0,0};
     // free all document memory.
@@ -699,7 +594,7 @@ void close_doc()
     ui_invalidate(scrollView);
 }
 
-void new_doc(int width, int height)
+export void new_doc(int width, int height)
 {
     iPair org = {0,0};
     // make sure there is no document first.
@@ -726,7 +621,7 @@ void new_doc(int width, int height)
     ui_invalidate(scrollView);
 }
 
-void new_layer(int above)
+export void new_layer(int above)
 {
     if (document) {
         // create a new layer.
@@ -739,7 +634,7 @@ void new_layer(int above)
     }
 }
 
-void delete_layer(int index)
+export void delete_layer(int index)
 {
     // find the layer directly below the one to delete.
     Frame* layer = get_layer(index);
@@ -753,7 +648,7 @@ void delete_layer(int index)
     }
 }
 
-void load_into_layer(int index, stringref path)
+export void load_into_layer(int index, stringref path)
 {
     Frame* layer = get_layer(index);
     if (layer) {
@@ -765,7 +660,7 @@ void load_into_layer(int index, stringref path)
     }
 }
 
-GfxImage load_image(stringref path) //, bool premultiply)
+export GfxImage load_image(stringref path) //, bool premultiply)
 {
     SurfaceData sd = {0};
     GfxImage img;
@@ -783,12 +678,12 @@ GfxImage load_image(stringref path) //, bool premultiply)
     return img;
 }
 
-void insert_frame(Frame* frame, Frame* parent, int after)
+export void insert_frame(Frame* frame, Frame* parent, int after)
 {
     frame_insert(frame, parent, after);
 }
 
-Frame* create_frame(Frame* parent, int after)
+export Frame* create_frame(Frame* parent, int after)
 {
     Frame* frame = frame_create_box(parent);
     if (after >= 0)
@@ -796,52 +691,52 @@ Frame* create_frame(Frame* parent, int after)
     return frame;
 }
 
-static void recurs_unreg_frame(Frame* frame)
+void recurs_unreg_frame(Frame* frame)
 {
     Frame* walk = frame->children;
-    unreg_frame(frame);
+    bindings.unreg_frame(frame);
     while (walk) { recurs_unreg_frame(walk); walk = walk->next; }
 }
 
-void destroy_frame(Frame* frame)
+export void destroy_frame(Frame* frame)
 {
     recurs_unreg_frame(frame);
     frame_destroy(frame);
 }
 
-void set_frame_col(Frame* frame, float red, float green, float blue, float alpha)
+export void set_frame_col(Frame* frame, float red, float green, float blue, float alpha)
 {
     RGBA col = make_rgba(red, green, blue, alpha);
     frame->message(frame, frameSetColour, &col);
 }
 
-void set_frame_alpha(Frame* frame, float alpha)
+export void set_frame_alpha(Frame* frame, float alpha)
 {
     frame->message(frame, frameSetAlpha, &alpha);
 }
 
-void set_frame_image(Frame* frame, GfxImage image)
+export void set_frame_image(Frame* frame, GfxImage image)
 {
     frame->message(frame, frameSetImage, image);
 }
 
-void invalidate_frame(Frame* frame)
+export void invalidate_frame(Frame* frame)
 {
     // TODO: project frame rect to client space.
     ui_invalidate(scrollView);
 }
 
-void invalidate_all()
+export void invalidate_all()
 {
     ui_invalidate(scrollView);
 }
 
-void set_brush_mode(BlendMode mode)
+export void set_brush_mode(BlendMode mode)
 {
 	brushMode = mode;
 }
 
-void set_brush_size(int sizeMin, int sizeMax, int spacing) // Q8
+export void set_brush_size(int sizeMin, int sizeMax, int spacing) // Q8
 {
     if (sizeMin > 255*256) sizeMin = 255*256;
     if (sizeMax > 255*256) sizeMax = 255*256;
@@ -850,22 +745,22 @@ void set_brush_size(int sizeMin, int sizeMax, int spacing) // Q8
 	painter_set_spacing(painter, spacing);
 }
 
-void set_brush_alpha(int alphaMin, int alphaMax) // Q8
+export void set_brush_alpha(int alphaMin, int alphaMax) // Q8
 {
     painter_set_alpha_range(painter, alphaMin, alphaMax);
 }
 
-void set_brush_col(RGBA col)
+export void set_brush_col(RGBA col)
 {
     painter_set_colour(painter, col);
 }
 
-void begin_painting()
+export void begin_painting()
 {
     paintMode = true;
 }
 
-void active_layer(int index)
+export void active_layer(int index)
 {
     Frame* layer = get_layer(index);
     // select new layer for drawing.
@@ -875,17 +770,17 @@ void active_layer(int index)
     } else no_active_layer();
 }
 
-static void cb_timer(void* data, timer_t* timer)
+void cb_timer(void* data, timer_t* timer)
 {
-    notify_timer(timer); // send notification to Lua.
+    bindings.notify_timer(timer); // send notification to Lua.
 }
 
-void* start_timer(unsigned long delay, unsigned long interval)
+export void* start_timer(unsigned long delay, unsigned long interval)
 {
     return timer_add(delay, interval, cb_timer, 0);
 }
 
-void stop_timer(void* timer)
+export void stop_timer(void* timer)
 {
     timer_remove(timer);
 }

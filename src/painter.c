@@ -10,10 +10,11 @@
 #include <limits.h>
 
 
-#define Q8_BITS 8
-#define Q8_ONE (1 << Q8_BITS)
-#define Q8_HALF (Q8_ONE >> 1)
-#define Q8_MASK (Q8_ONE-1)
+const Q8_BITS = 8
+const Q8_ONE = 1 << Q8_BITS
+const Q8_HALF = Q8_ONE >> 1
+const Q8_MASK = Q8_ONE - 1
+
 #define Q8_FLOOR(X) ((X) & ~Q8_MASK)
 #define Q8_CEIL(X) (((X) | Q8_MASK) + 1)
 #define Q8_IFLOOR(X) ((X) >> Q8_BITS)
@@ -49,10 +50,10 @@ struct DabPainter {
 //GfxImage painter_get_accum(DabPainter* dp) { return dp->accum; }
 //RGBA painter_get_col(DabPainter* dp) { return dp->col; }
 
-static const int c_accumSize = 128;
-static const RGBA c_transparent = {0};
+const int c_accumSize = 128;
+const RGBA c_transparent = {0};
 
-DabPainter* createDabPainter(GfxDraw draw)
+export DabPainter* createDabPainter(GfxDraw draw)
 {
 	DabPainter* dp = cpart_new(DabPainter);
 	dp->draw = draw;
@@ -71,7 +72,7 @@ DabPainter* createDabPainter(GfxDraw draw)
 	return dp;
 }
 
-static void painter_upsize(DabPainter* dp)
+void painter_upsize(DabPainter* dp)
 {
 	if (dp->draw) {
 		// the accumulation target must be at least 1.5 times the
@@ -98,11 +99,11 @@ static void painter_upsize(DabPainter* dp)
 	}
 }
 
-void painter_set_output(DabPainter* dp, DabPainterOutput func, void* data) {
+export void painter_set_output(DabPainter* dp, DabPainterOutput func, void* data) {
 	dp->output = func;
 	dp->output_data = data;
 }
-void painter_set_brush(DabPainter* dp, SurfaceData* brush) {
+export void painter_set_brush(DabPainter* dp, SurfaceData* brush) {
 	assert(brush->format == surface_a8);
 	if (brush->format == surface_a8) {
 		dp->brush = brush;
@@ -110,19 +111,19 @@ void painter_set_brush(DabPainter* dp, SurfaceData* brush) {
 		dp->brushHeight = (float)brush->height;
 	}
 }
-void painter_set_colour(DabPainter* dp, RGBA col) {
+export void painter_set_colour(DabPainter* dp, RGBA col) {
 	dp->col = col;
 }
-void painter_set_blendMode(DabPainter* dp, GfxBlendMode mode) {
+export void painter_set_blendMode(DabPainter* dp, GfxBlendMode mode) {
 	dp->mode = mode;
 }
-void painter_set_alpha_range(DabPainter* dp, int min, int max) {
+export void painter_set_alpha_range(DabPainter* dp, int min, int max) {
 	if (min<0) min=0; else if (min>255) min=255;
 	if (max<min) max=min; else if (max>255) max=255;
 	dp->alpha_min = min;             // [0,255]
 	dp->alpha_range = max-min;       // ?? [256,1] since 0 <= pressure < 1
 }
-void painter_set_size_range(DabPainter* dp, int min, int max) {
+export void painter_set_size_range(DabPainter* dp, int min, int max) {
 	if (min<0) min=0;
 	if (max<min) max=min;
 	dp->size_min = min;
@@ -130,12 +131,12 @@ void painter_set_size_range(DabPainter* dp, int min, int max) {
 	// grow the accumulation target if necessary.
 	painter_upsize(dp);
 }
-void painter_set_spacing(DabPainter* dp, int ratio) {
+export void painter_set_spacing(DabPainter* dp, int ratio) {
 	if (ratio<1) ratio = 1;
 	dp->spacing = ratio;
 }
 
-static void painter_flush(DabPainter* dp)
+void painter_flush(DabPainter* dp)
 {
 	// round coords OUT from Q8 to integer pixels.
 	iRect dirty;
@@ -181,9 +182,9 @@ static void painter_flush(DabPainter* dp)
 	}
 }
 
-static const int c_deferMinPixels = 10;
+const int c_deferMinPixels = 10;
 
-static void painter_set_bounds(DabPainter* dp, int x, int y)
+void painter_set_bounds(DabPainter* dp, int x, int y)
 {
 	int brushSize, maxDist, dist, remain;
 	int half = dp->accum_size << (Q8_BITS-1); // to Q8, div 2 >= 0
@@ -205,7 +206,7 @@ static void painter_set_bounds(DabPainter* dp, int x, int y)
 	dp->remain = remain;
 }
 
-static void paint_start_painting(DabPainter* dp, bool clear)
+void paint_start_painting(DabPainter* dp, bool clear)
 {
 	// clear the accum buffer if required.
 	// start with a fully transparent layer.
@@ -213,12 +214,12 @@ static void paint_start_painting(DabPainter* dp, bool clear)
 		surface_fill(&dp->accum, c_transparent);
 }
 
-static void paint_end_painting(DabPainter* dp)
+void paint_end_painting(DabPainter* dp)
 {
 	// nothing to do.
 }
 
-static void paint_dab_overflow(DabPainter* dp, int x, int y)
+void paint_dab_overflow(DabPainter* dp, int x, int y)
 {
 	// must stop painting so we can render the accum target.
 	paint_end_painting(dp);
@@ -233,7 +234,7 @@ static void paint_dab_overflow(DabPainter* dp, int x, int y)
 	painter_set_bounds(dp, x, y);
 }
 
-static void paint_dab(DabPainter* dp, int x, int y, int alpha, int size)
+void paint_dab(DabPainter* dp, int x, int y, int alpha, int size)
 {
 	int left, top;
 	int limit = dp->accum_size << Q8_BITS; // to Q8.
@@ -286,7 +287,7 @@ static void paint_dab(DabPainter* dp, int x, int y, int alpha, int size)
 	if (top+size > dp->dirty.bottom) dp->dirty.bottom = top+size;
 }
 
-void painter_begin(DabPainter* dp, struct Tablet_InputEvent* e)
+export void painter_begin(DabPainter* dp, struct Tablet_InputEvent* e)
 {
 	int qx, qy;
 
@@ -322,7 +323,7 @@ void painter_begin(DabPainter* dp, struct Tablet_InputEvent* e)
 	}
 }
 
-void painter_end(DabPainter* dp)
+export void painter_end(DabPainter* dp)
 {
 	// stop painting so the app can handle redraw.
 	paint_end_painting(dp);
@@ -334,13 +335,13 @@ void painter_end(DabPainter* dp)
 	}
 }
 
-void painter_begin_batch(DabPainter* dp)
+export void painter_begin_batch(DabPainter* dp)
 {
 	// begin drawing to the accum target.
 	paint_start_painting(dp, false);
 }
 
-void painter_end_batch(DabPainter* dp)
+export void painter_end_batch(DabPainter* dp)
 {
 	// stop painting so the app can handle redraw.
 	paint_end_painting(dp);
@@ -349,7 +350,7 @@ void painter_end_batch(DabPainter* dp)
 	invalidate_all();
 }
 
-void painter_draw(DabPainter* dp, Tablet_InputEvent* e)
+export void painter_draw(DabPainter* dp, Tablet_InputEvent* e)
 {
 	int qx, qy;
 	int x, y, dx, dy;
